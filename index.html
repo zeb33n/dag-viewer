@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <style>
+      body {
+      overflow-y: hidden;
+    }
+
+
+    #dag_viewer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      height: 100%;
+      touch-ction: none;
+    }
+    </style>
+    <script type="module">
+      import {dag_viewer_init} from "./dag_viewer.js"
+      dag_viewer_init();
+    </script>
+  </head>
+  <body>
+    <canvas id="dag_viewer" width=1600  height=900,  tabindex='1'></canvas>
+  </body>
+</html>

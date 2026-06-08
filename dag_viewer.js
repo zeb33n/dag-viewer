@@ -6,10 +6,11 @@ let w = null;
 let text = "";
 
 function color_hex(colour) {
-    const r = ((colour>>(0*8))&0xFF).toString(16).padStart(2, '0');
-    const g = ((colour>>(1*8))&0xFF).toString(16).padStart(2, '0');
-    const b = ((colour>>(2*8))&0xFF).toString(16).padStart(2, '0');
-    const a = ((colour>>(3*8))&0xFF).toString(16).padStart(2, '0');
+    const r = ((colour>>(3*8))&0xFF).toString(16).padStart(2, '0');
+    const g = ((colour>>(2*8))&0xFF).toString(16).padStart(2, '0');
+    const b = ((colour>>(1*8))&0xFF).toString(16).padStart(2, '0');
+    const a = ((colour>>(0*8))&0xFF).toString(16).padStart(2, '0');
+    console.log(a);
     return "#"+r+g+b+a;
 }
 
@@ -54,6 +55,7 @@ const wasm_path = new URL('target/wasm32-unknown-unknown/release/dag_viewer.wasm
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
     dag_viewer_js: {
         js_fill_rect,
+        js_log_str,
         js_log,
     }
 

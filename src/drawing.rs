@@ -1,4 +1,4 @@
-use crate::data_types::*;
+use crate::{data_types::*, js_fill_circ, js_fill_line};
 use std::sync::OnceLock;
 
 #[derive(Debug)]
@@ -74,4 +74,15 @@ pub fn layout() -> Vec<DrawableNode> {
     };
 
     vec![node_1, node_2]
+}
+
+pub fn draw(nodes: Vec<DrawableNode>) -> () {
+    for node in nodes.iter() {
+        for path in node.edges.iter() {
+            for line in path.line_segments.iter() {
+                unsafe { js_fill_line(line.a.0, line.a.1, line.b.0, line.b.1, 0x00FFFFFF, 5) };
+            }
+        }
+        unsafe { js_fill_circ(node.position.0, node.position.1, 10, 0x00FF00FF) };
+    }
 }

@@ -19,6 +19,22 @@ function js_fill_rect(x, y, w, h, colour) {
     ctx.fillRect(x, y, w, h);
 }
 
+function js_fill_line(x1, y1, x2, y2, colour, width) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color_hex(colour);
+    ctx.lineWidth = width;
+    ctx.stroke();
+}
+
+function js_fill_circ(x, y, radius, colour) {
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = color_hex(colour);
+    ctx.fill();
+}
+
 function js_log_str(msg) {
     console.log(get_text(msg));
 }
@@ -55,6 +71,8 @@ const wasm_path = new URL('target/wasm32-unknown-unknown/release/dag_viewer.wasm
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
     dag_viewer_js: {
         js_fill_rect,
+        js_fill_line,
+        js_fill_circ, 
         js_log_str,
         js_log,
     }

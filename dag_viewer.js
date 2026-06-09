@@ -10,7 +10,6 @@ function color_hex(colour) {
     const g = ((colour>>(2*8))&0xFF).toString(16).padStart(2, '0');
     const b = ((colour>>(1*8))&0xFF).toString(16).padStart(2, '0');
     const a = ((colour>>(0*8))&0xFF).toString(16).padStart(2, '0');
-    console.log(a);
     return "#"+r+g+b+a;
 }
 
@@ -76,9 +75,15 @@ w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
         js_log_str,
         js_log,
     }
-
 })
 
 export function dag_viewer_init() {
-    w.instance.exports.dag_viewer_rs_main();
+    w.instance.exports.dag_viewer_init(app.width, app.height);
+
+    app.addEventListener("keydown", (c) =>  {
+      if (c.key == "ArrowUp") w.instance.exports.dag_viewer_up(c.keyCode);
+      if (c.key == "ArrowDown") w.instance.exports.dag_viewer_down(c.keyCode);
+      if (c.key == "ArrowLeft") w.instance.exports.dag_viewer_left(c.keyCode);
+      if (c.key == "ArrowRight") w.instance.exports.dag_viewer_right(c.keyCode);
+    });
 }

@@ -1,4 +1,4 @@
-use crate::{data_types::*, js_fill_circ, js_fill_line};
+use crate::{data_types::*, js_fill_circ, js_fill_line, js_fill_rect, js_log};
 use std::sync::OnceLock;
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ pub struct DrawableNode {
     edges: Vec<Path>,
 }
 
-fn init_nodes(nodes: Vec<Node>) {
+fn init_nodes(nodes: Vec<Node>) -> () {
     LOGICAL_NODES.set(nodes).unwrap();
 }
 
@@ -76,13 +76,41 @@ pub fn layout() -> Vec<DrawableNode> {
     vec![node_1, node_2]
 }
 
-pub fn draw(nodes: Vec<DrawableNode>) -> () {
-    for node in nodes.iter() {
+pub struct Scene {
+    pub camera: Vec2,
+    nodes: Vec<DrawableNode>,
+    screen_width: i32,
+    screen_height: i32,
+}
+
+impl Scene {
+    pub fn new(nodes: Vec<DrawableNode>, screen_dim: Vec2) -> Self {
+        Self {
+            camera: (screen_dim.0 / 2, screen_dim.1 / 2),
+            nodes: nodes,
+            screen_width: screen_dim.0,
+            screen_height: screen_dim.1,
+        }
+    }
+
+    fn to_screen(&self, coord: Vec2) -> Vec2 {
+        (coord.0 + self.camera.0, coord.1 + self.camera.1)
+    }
+}
+
+pub fn draw(scene: &Scene) -> () {
+    unsafe {
+        js_fill_rect(0, 0, scene.screen_width, scene.screen_height, 0xFFFFFFFF);
+    }
+    for node in scene.nodes.iter() {
         for path in node.edges.iter() {
             for line in path.line_segments.iter() {
-                unsafe { js_fill_line(line.a.0, line.a.1, line.b.0, line.b.1, 0x00FFFFFF, 5) };
+                let a = scene.to_screen(line.a);
+                let b = scene.to_screen(line.b);
+                unsafe { js_fill_line(a.0, a.1, b.0, b.1, 0x00FFFFFF, 5) };
             }
         }
-        unsafe { js_fill_circ(node.position.0, node.position.1, 10, 0x00FF00FF) };
+        let position = scene.to_screen(node.position);
+        unsafe { js_fill_circ(position.0, position.1, 10, 0x00FF00FF) };
     }
 }

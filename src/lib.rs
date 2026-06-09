@@ -7,42 +7,56 @@ use drawing::{draw, layout, Scene};
 mod data_types;
 use data_types::*;
 
-static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new(vec![], (0, 0))));
+static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new(vec![], (0.0, 0.0))));
 
 #[unsafe(no_mangle)]
 // force the compiler to use C ABI so WebAssemply module interface is stable
 pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
     unsafe { js_log_str("banans".as_ptr()) };
     let mut scene = SCENE.lock().unwrap();
-    *scene = Scene::new(layout(), (w, h));
+    *scene = Scene::new(layout(), (w as f32, h as f32));
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_left() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.0 += 10;
+    scene.camera.pos.0 += 10.0;
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_right() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.0 -= 10;
+    scene.camera.pos.0 -= 10.0;
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_up() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.1 += 10;
+    scene.camera.pos.1 += 10.0;
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_down() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.1 -= 10;
+    scene.camera.pos.1 -= 10.0;
+    draw(&*scene);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_z() -> () {
+    let mut scene = SCENE.lock().unwrap();
+    scene.camera.zoom += 0.05;
+    draw(&*scene);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_x() -> () {
+    let mut scene = SCENE.lock().unwrap();
+    scene.camera.zoom -= 0.05;
     draw(&*scene);
 }
 

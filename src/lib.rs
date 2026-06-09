@@ -21,28 +21,28 @@ pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_left() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.0 += 10.0;
+    scene.camera.pos.0 -= 10.0;
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_right() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.0 -= 10.0;
+    scene.camera.pos.0 += 10.0;
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_up() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.1 += 10.0;
+    scene.camera.pos.1 -= 10.0;
     draw(&*scene);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_down() -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.1 -= 10.0;
+    scene.camera.pos.1 += 10.0;
     draw(&*scene);
 }
 

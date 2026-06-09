@@ -103,8 +103,8 @@ impl Scene {
 
     fn to_screen(&self, coord: Vec2) -> Vec2 {
         (
-            (coord.0 - self.camera.pos.0) * self.camera.zoom + self.screen_width,
-            (coord.1 - self.camera.pos.1) * self.camera.zoom + self.screen_height,
+            (coord.0 - self.camera.pos.0) * self.camera.zoom + self.screen_width / 2.0,
+            (coord.1 - self.camera.pos.1) * self.camera.zoom + self.screen_height / 2.0,
         )
     }
 }

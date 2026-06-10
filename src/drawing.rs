@@ -1,12 +1,6 @@
-use crate::{data_types::*, js_fill_circ, js_fill_line, js_fill_rect, js_log};
-use std::sync::OnceLock;
+use crate::{data_types::*, model::*, scene::*, js_fill_circ, js_fill_line, js_fill_rect, js_log};
 
-#[derive(Debug)]
-struct Node {
-    label: String,
-}
 
-static LOGICAL_NODES: OnceLock<Vec<Node>> = OnceLock::new();
 
 struct Line {
     a: Vec2,
@@ -27,25 +21,17 @@ pub struct DrawableNode {
     edges: Vec<Path>,
 }
 
-fn init_nodes(nodes: Vec<Node>) -> () {
-    LOGICAL_NODES.set(nodes).unwrap();
-}
-
-fn get_node(handle: LogicalNodeHandle) -> &'static Node {
-    &LOGICAL_NODES.get().unwrap()[handle]
-}
-
-pub fn layout() -> Vec<DrawableNode> {
+pub fn layout_test() -> Vec<DrawableNode> {
     let nodes = vec![
         Node {
             label: String::from("node_1"),
+            dependents: vec![]
         },
         Node {
             label: String::from("node_2"),
+            dependents: vec![]
         },
     ];
-
-    init_nodes(nodes);
 
     let line = Line {
         a: (50, 50),
@@ -74,28 +60,6 @@ pub fn layout() -> Vec<DrawableNode> {
     };
 
     vec![node_1, node_2]
-}
-
-pub struct Scene {
-    pub camera: Vec2,
-    nodes: Vec<DrawableNode>,
-    screen_width: i32,
-    screen_height: i32,
-}
-
-impl Scene {
-    pub fn new(nodes: Vec<DrawableNode>, screen_dim: Vec2) -> Self {
-        Self {
-            camera: (screen_dim.0 / 2, screen_dim.1 / 2),
-            nodes: nodes,
-            screen_width: screen_dim.0,
-            screen_height: screen_dim.1,
-        }
-    }
-
-    fn to_screen(&self, coord: Vec2) -> Vec2 {
-        (coord.0 + self.camera.0, coord.1 + self.camera.1)
-    }
 }
 
 pub fn draw(scene: &Scene) -> () {

@@ -1,18 +1,25 @@
-mod data_types;
 mod drawing;
 mod js;
 
 use std::sync::{LazyLock, Mutex};
 
-use drawing::{draw, layout, Scene};
+use drawing::draw;
+use scene::*;
+mod data_types;
+mod model;
+mod scene;
+use dot_parser::ast::Graph;
+const DOT_FILE: &str = include_str!("../graph.dot");
 
-static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new(vec![], 0.0, 0.0)));
+static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_default()));
 
 #[unsafe(no_mangle)]
 // force the compiler to use C ABI so WebAssemply module interface is stable
 pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
     let mut scene = SCENE.lock().unwrap();
-    *scene = Scene::new(layout(), w as f32, h as f32);
+    let graph: Graph<(dot_parser::ast::ID<'_>, dot_parser::ast::ID<'_>)> =
+        Graph::try_from(DOT_FILE).unwrap();
+    *scene = Scene::new(w, h, &graph);
     draw(&*scene);
 }
 

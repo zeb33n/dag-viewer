@@ -9,8 +9,8 @@ struct Node {
 static LOGICAL_NODES: OnceLock<Vec<Node>> = OnceLock::new();
 
 struct Line {
-    a: Vec2,
-    b: Vec2,
+    a: VecF2,
+    b: VecF2,
     colour: Colour,
 }
 
@@ -22,9 +22,10 @@ struct Path {
 
 pub struct DrawableNode {
     is_fake_node: bool,
-    position: Vec2,
+    position: VecF2,
     logical_node_handle: LogicalNodeHandle,
     edges: Vec<Path>,
+    colour: Colour,
 }
 
 fn init_nodes(nodes: Vec<Node>) -> () {
@@ -47,37 +48,59 @@ pub fn layout() -> Vec<DrawableNode> {
 
     init_nodes(nodes);
 
-    let line = Line {
-        a: (50.0, 50.0),
-        b: (100.0, 100.0),
-        colour: 0xFFFFFFFF,
+    let line_1 = Line {
+        a: VecF2 { x: 50.0, y: 50.0 },
+        b: VecF2 { x: 100.0, y: 100.0 },
+        colour: 0x000000FF,
     };
 
-    let path = Path {
+    let line_2 = Line {
+        a: VecF2 { x: 150.0, y: 50.0 },
+        b: VecF2 { x: 100.0, y: 100.0 },
+        colour: 0x000000FF,
+    };
+
+    let path_1 = Path {
         from: 0,
         to: 1,
-        line_segments: vec![line],
+        line_segments: vec![line_1],
+    };
+
+    let path_2 = Path {
+        from: 3,
+        to: 1,
+        line_segments: vec![line_2],
     };
 
     let node_1 = DrawableNode {
         is_fake_node: false,
-        position: (50.0, 50.0),
+        position: VecF2 { x: 50.0, y: 50.0 },
         logical_node_handle: 0,
-        edges: vec![path],
+        edges: vec![path_1],
+        colour: 0xFF0000FF,
     };
 
     let node_2 = DrawableNode {
         is_fake_node: false,
-        position: (100.0, 100.0),
+        position: VecF2 { x: 100.0, y: 100.0 },
         logical_node_handle: 1,
         edges: vec![],
+        colour: 0x00FF00FF,
     };
 
-    vec![node_1, node_2]
+    let node_3 = DrawableNode {
+        is_fake_node: false,
+        position: VecF2 { x: 150.0, y: 50.0 },
+        logical_node_handle: 1,
+        edges: vec![path_2],
+        colour: 0x0000FFFF,
+    };
+
+    vec![node_1, node_2, node_3]
 }
 
 pub struct Camera {
-    pub pos: Vec2,
+    pub pos: VecF2,
     pub zoom: f32,
 }
 
@@ -89,23 +112,26 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(nodes: Vec<DrawableNode>, screen_dim: Vec2) -> Self {
+    pub fn new(nodes: Vec<DrawableNode>, screen_w: f32, screen_h: f32) -> Self {
         Self {
             camera: Camera {
-                pos: (screen_dim.0 / 2.0, screen_dim.1 / 2.0),
+                pos: VecF2 {
+                    x: screen_w / 2.0,
+                    y: screen_h / 2.0,
+                },
                 zoom: 1.0,
             },
             nodes: nodes,
-            screen_width: screen_dim.0,
-            screen_height: screen_dim.1,
+            screen_width: screen_w,
+            screen_height: screen_h,
         }
     }
 
-    fn to_screen(&self, coord: Vec2) -> Vec2 {
-        (
-            (coord.0 - self.camera.pos.0) * self.camera.zoom + self.screen_width / 2.0,
-            (coord.1 - self.camera.pos.1) * self.camera.zoom + self.screen_height / 2.0,
-        )
+    fn to_screen(&self, coord: &VecF2) -> VecI2 {
+        VecI2::from_vecf2(VecF2 {
+            x: (coord.x - self.camera.pos.x) * self.camera.zoom + self.screen_width / 2.0,
+            y: (coord.y - self.camera.pos.y) * self.camera.zoom + self.screen_height / 2.0,
+        })
     }
 }
 
@@ -120,16 +146,16 @@ pub fn draw(scene: &Scene) -> () {
     for node in scene.nodes.iter() {
         for path in node.edges.iter() {
             for line in path.line_segments.iter() {
-                let a = scene.to_screen(line.a);
-                let b = scene.to_screen(line.b);
-                js::fill_line(
-                    a.0 as i32, a.1 as i32, b.0 as i32, b.1 as i32, 0x000000FF, 5,
-                )
+                let a = scene.to_screen(&line.a);
+                let b = scene.to_screen(&line.b);
+                js::fill_line(a.x, a.y, b.x, b.y, line.colour, 5)
             }
         }
-        let position = scene.to_screen(node.position);
-        js::fill_circ(position.0 as i32, position.1 as i32, 10, 0x00FF00FF);
-        js::log(position.0 as i32);
-        js::log(position.1 as i32);
+    }
+    for node in scene.nodes.iter() {
+        let position = scene.to_screen(&node.position);
+        js::fill_circ(position.x, position.y, 10, node.colour);
+        js::log(position.x);
+        js::log(position.y);
     }
 }

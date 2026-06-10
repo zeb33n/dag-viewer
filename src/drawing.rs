@@ -1,4 +1,4 @@
-use crate::{data_types::*, js_fill_circ, js_fill_line, js_fill_rect, js_log};
+use crate::{data_types::*, js};
 use std::sync::OnceLock;
 
 #[derive(Debug)]
@@ -110,30 +110,26 @@ impl Scene {
 }
 
 pub fn draw(scene: &Scene) -> () {
-    unsafe {
-        js_fill_rect(
-            0,
-            0,
-            scene.screen_width as i32,
-            scene.screen_height as i32,
-            0xFFFFFFFF,
-        )
-    };
+    js::fill_rect(
+        0,
+        0,
+        scene.screen_width as i32,
+        scene.screen_height as i32,
+        0xFFFFFFFF,
+    );
     for node in scene.nodes.iter() {
         for path in node.edges.iter() {
             for line in path.line_segments.iter() {
                 let a = scene.to_screen(line.a);
                 let b = scene.to_screen(line.b);
-                unsafe {
-                    js_fill_line(
-                        a.0 as i32, a.1 as i32, b.0 as i32, b.1 as i32, 0x000000FF, 5,
-                    )
-                };
+                js::fill_line(
+                    a.0 as i32, a.1 as i32, b.0 as i32, b.1 as i32, 0x000000FF, 5,
+                )
             }
         }
         let position = scene.to_screen(node.position);
-        unsafe { js_fill_circ(position.0 as i32, position.1 as i32, 10, 0x00FF00FF) };
-        unsafe { js_log(position.0 as i32) };
-        unsafe { js_log(position.1 as i32) };
+        js::fill_circ(position.0 as i32, position.1 as i32, 10, 0x00FF00FF);
+        js::log(position.0 as i32);
+        js::log(position.1 as i32);
     }
 }

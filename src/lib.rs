@@ -61,6 +61,9 @@ pub extern "C" fn dag_viewer_z() -> () {
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_x() -> () {
     let mut scene = SCENE.lock().unwrap();
+    if scene.camera.zoom <= 0.05 {
+        return;
+    }
     scene.camera.zoom -= 0.05;
     draw(&*scene);
 }

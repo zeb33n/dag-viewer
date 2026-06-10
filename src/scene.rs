@@ -17,6 +17,7 @@ pub struct Scene {
 
 impl Scene {
     pub fn new(screen_w: i32, screen_h: i32, graph: &Graph<(ID<'_>, ID<'_>)>) -> Self {
+        let mut model = Model::new(graph);
         Self {
             camera: Camera {
                 pos: VecF2 {
@@ -25,10 +26,10 @@ impl Scene {
                 },
                 zoom: 1.0,
             },
-            nodes: Self::layout_test(),
+            nodes: Self::layout_test(&mut model),
             screen_w: screen_w as f32,
             screen_h: screen_h as f32,
-            model: Model::new(graph),
+            model: model,
         }
     }
 
@@ -38,7 +39,7 @@ impl Scene {
                 pos: VecF2 { x: 0.0, y: 0.0 },
                 zoom: 1.0,
             },
-            nodes: Self::layout_test(),
+            nodes: Self::layout_test(&mut Model::new_default()),
             screen_w: 0.0,
             screen_h: 0.0,
             model: Model::new_default(),
@@ -47,7 +48,21 @@ impl Scene {
 
     pub fn layout() -> () {}
 
-    pub fn layout_test() -> Vec<DrawableNode> {
+    pub fn layout_test(model: &mut Model) -> Vec<DrawableNode> {
+        model.logical_nodes = vec![
+            Node {
+                label: String::from("node_1"),
+                dependents: vec![1],
+            },
+            Node {
+                label: String::from("node_2"),
+                dependents: vec![],
+            },
+            Node {
+                label: String::from("node_3"),
+                dependents: vec![1],
+            },
+        ];
         let line_1 = Line {
             a: VecF2 { x: 50.0, y: 50.0 },
             b: VecF2 { x: 100.0, y: 100.0 },

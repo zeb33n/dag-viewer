@@ -34,6 +34,12 @@ function js_fill_circ(x, y, radius, colour) {
     ctx.fill();
 }
 
+function js_fill_string(x, y, s, colour, size) {
+    ctx.fillStyle = color_hex(colour);
+    ctx.font = size + "px monospace";
+    ctx.fillText(get_text(s), x, y); 
+}
+
 function js_log_str(msg) {
     console.log(get_text(msg));
 }
@@ -71,7 +77,8 @@ w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
     dag_viewer_js: {
         js_fill_rect,
         js_fill_line,
-        js_fill_circ, 
+        js_fill_circ,
+        js_fill_string,
         js_log_str,
         js_log,
     }

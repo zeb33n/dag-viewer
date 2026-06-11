@@ -24,34 +24,6 @@ pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_left() -> () {
-    let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.x -= 10.0;
-    draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_right() -> () {
-    let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.x += 10.0;
-    draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_up() -> () {
-    let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.y -= 10.0;
-    draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_down() -> () {
-    let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.y += 10.0;
-    draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_z() -> () {
     let mut scene = SCENE.lock().unwrap();
     scene.camera.zoom += 0.05;
@@ -69,9 +41,9 @@ pub extern "C" fn dag_viewer_x() -> () {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_drag(dx: i32, dy: i32) -> () {
+pub extern "C" fn dag_viewer_drag(dx: f32, dy: f32) -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.x += dx as f32;
-    scene.camera.pos.y += dy as f32;
+    scene.camera.pos.x += dx;
+    scene.camera.pos.y += dy;
     draw(&*scene);
 }

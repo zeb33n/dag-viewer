@@ -90,10 +90,6 @@ export function dag_viewer_init() {
     w.instance.exports.dag_viewer_init(app.width, app.height);
 
     app.addEventListener("keydown", (c) =>  {
-      if (c.key == "ArrowUp") w.instance.exports.dag_viewer_up(c.keyCode);
-      if (c.key == "ArrowDown") w.instance.exports.dag_viewer_down(c.keyCode);
-      if (c.key == "ArrowLeft") w.instance.exports.dag_viewer_left(c.keyCode);
-      if (c.key == "ArrowRight") w.instance.exports.dag_viewer_right(c.keyCode);
       if (c.key == "z") w.instance.exports.dag_viewer_z(c.keyCode);
       if (c.key == "x") w.instance.exports.dag_viewer_x(c.keyCode);
     });

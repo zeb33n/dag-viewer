@@ -15,16 +15,16 @@ pub fn draw(scene: &Scene) -> () {
     for node in scene.nodes.iter() {
         for path in node.edges.iter() {
             for line in path.line_segments.iter() {
-                let a = scene.to_screen(&line.a);
-                let b = scene.to_screen(&line.b);
+                let a = scene.world_to_screen(&line.a);
+                let b = scene.world_to_screen(&line.b);
                 let width = 5.0 * scene.camera.zoom;
                 js::fill_line(a.x, a.y, b.x, b.y, line.colour, width);
             }
         }
     }
     for node in scene.nodes.iter() {
-        let p = scene.to_screen(&node.position);
-        let radius = (10.0 * scene.camera.zoom);
+        let p = scene.world_to_screen(&node.position);
+        let radius = 10.0 * scene.camera.zoom;
         js::fill_circ(p.x, p.y, radius, node.colour);
         let text: *const u8 = scene
             .model

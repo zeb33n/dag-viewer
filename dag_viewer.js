@@ -73,6 +73,15 @@ function get_text(msg) {
     return message;
 }
 
+function canvas_coords(e) {
+    const bounding_box = app.getBoundingClientRect();
+
+    return {
+        x: (e.clientX - bounding_box.left) * app.width / app.clientWidth,
+        y: (e.clientY - bounding_box.top) * app.height / app.clientHeight,
+    };
+}
+
 const wasm_path = new URL('target/wasm32-unknown-unknown/release/dag_viewer.wasm', import.meta.url);
 
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
@@ -95,10 +104,8 @@ export function dag_viewer_init() {
     });
 
     app.addEventListener("mousedown", (e) => {
-        let bound_box = app.getBoundingClientRect();
-        let x = e.clientX - bound_box.left;
-        let y = e.clientY - bound_box.top;
-        mouse_click_pos = {x: x, y: y};
+        const coords = canvas_coords(e);
+        mouse_click_pos = {x: coords.x, y: coords.y};
         mouse_is_down = true;
     });
 
@@ -112,12 +119,14 @@ export function dag_viewer_init() {
 
     app.addEventListener("mousemove", (e) => {
         if (!mouse_is_down) return;
-        let bound_box = app.getBoundingClientRect();
-        let x_pos = e.clientX - bound_box.left;
-        let y_pos = e.clientY - bound_box.top;
-        const dx = mouse_click_pos.x - x_pos;
-        const dy = mouse_click_pos.y - y_pos;
-        mouse_click_pos = {x: x_pos, y: y_pos};
+
+        const coords = canvas_coords(e);
+        
+        const dx = mouse_click_pos.x - coords.x;
+        const dy = mouse_click_pos.y - coords.y;
+
+        mouse_click_pos = {x: coords.x, y: coords.y};
+
         w.instance.exports.dag_viewer_drag(dx, dy);
     });
 }

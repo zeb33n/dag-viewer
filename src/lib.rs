@@ -43,7 +43,7 @@ pub extern "C" fn dag_viewer_x() -> () {
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_drag(dx: f32, dy: f32) -> () {
     let mut scene = SCENE.lock().unwrap();
-    scene.camera.pos.x += dx;
-    scene.camera.pos.y += dy;
+    scene.camera.pos.x += dx / scene.camera.zoom;
+    scene.camera.pos.y += dy / scene.camera.zoom;
     draw(&*scene);
 }

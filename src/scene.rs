@@ -114,7 +114,7 @@ impl Scene {
         vec![node_1, node_2, node_3]
     }
 
-    pub fn to_screen(&self, coord: &VecF2) -> VecF2 {
+    pub fn world_to_screen(&self, coord: &VecF2) -> VecF2 {
         VecF2 {
             x: (coord.x - self.camera.pos.x) * self.camera.zoom + self.screen_w / 2.0,
             y: (coord.y - self.camera.pos.y) * self.camera.zoom + self.screen_h / 2.0,

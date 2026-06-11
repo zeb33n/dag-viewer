@@ -4,6 +4,8 @@ let app = document.getElementById("dag_viewer");
 let ctx = app.getContext("2d");
 let w = null;
 let text = "";
+let mouse_is_down = false;
+let mouse_click_pos = { x: 0, y: 0};
 
 function color_hex(colour) {
     const r = ((colour>>(3*8))&0xFF).toString(16).padStart(2, '0');
@@ -94,5 +96,32 @@ export function dag_viewer_init() {
       if (c.key == "ArrowRight") w.instance.exports.dag_viewer_right(c.keyCode);
       if (c.key == "z") w.instance.exports.dag_viewer_z(c.keyCode);
       if (c.key == "x") w.instance.exports.dag_viewer_x(c.keyCode);
+    });
+
+    app.addEventListener("mousedown", (e) => {
+        let bound_box = app.getBoundingClientRect();
+        let x = e.clientX - bound_box.left;
+        let y = e.clientY - bound_box.top;
+        mouse_click_pos = {x: x, y: y};
+        mouse_is_down = true;
+    });
+
+    app.addEventListener("mouseup", (_) => {
+        mouse_is_down = false;
+    });
+
+    app.addEventListener("mouseleave", (_) => {
+        mouse_is_down = false;
+    });
+
+    app.addEventListener("mousemove", (e) => {
+        if (!mouse_is_down) return;
+        let bound_box = app.getBoundingClientRect();
+        let x_pos = e.clientX - bound_box.left;
+        let y_pos = e.clientY - bound_box.top;
+        const dx = mouse_click_pos.x - x_pos;
+        const dy = mouse_click_pos.y - y_pos;
+        mouse_click_pos = {x: x_pos, y: y_pos};
+        w.instance.exports.dag_viewer_drag(dx, dy);
     });
 }

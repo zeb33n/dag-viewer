@@ -6,6 +6,7 @@ use std::sync::{LazyLock, Mutex};
 use drawing::draw;
 use scene::*;
 mod data_types;
+use data_types::*;
 mod model;
 mod scene;
 use dot_parser::ast::Graph;
@@ -24,26 +25,29 @@ pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_z() -> () {
-    let mut scene = SCENE.lock().unwrap();
-    scene.camera.zoom += 0.05;
-    draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_x() -> () {
-    let mut scene = SCENE.lock().unwrap();
-    if scene.camera.zoom <= 0.05 {
-        return;
-    }
-    scene.camera.zoom -= 0.05;
-    draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_drag(dx: f32, dy: f32) -> () {
     let mut scene = SCENE.lock().unwrap();
     scene.camera.pos.x += dx / scene.camera.zoom;
     scene.camera.pos.y += dy / scene.camera.zoom;
     draw(&*scene);
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_zoom(x: f32, y: f32, direction: bool) -> () {
+    let dz = if direction { -0.1 } else { 0.1 };
+    let mut scene = SCENE.lock().unwrap();
+    if scene.camera.zoom - dz <= 0.0 {
+        return;
+    }
+    let coord_before = scene.screen_to_world(&VecF2 { x: x, y: y });
+    scene.camera.zoom -= dz;
+    let coord_after = scene.screen_to_world(&VecF2 { x: x, y: y });
+    scene.camera.pos.x += coord_before.x - coord_after.x;
+    scene.camera.pos.y += coord_before.y - coord_after.y;
+    draw(&*scene);
+}
+
+// Convert the cursor screen position to a world position before zooming.
+// Change the zoom.
+// Convert the same cursor screen position to a world position after zooming.
+// Move the camera by the difference.

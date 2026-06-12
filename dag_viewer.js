@@ -98,11 +98,6 @@ w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
 export function dag_viewer_init() {
     w.instance.exports.dag_viewer_init(app.width, app.height);
 
-    app.addEventListener("keydown", (c) =>  {
-      if (c.key == "z") w.instance.exports.dag_viewer_z(c.keyCode);
-      if (c.key == "x") w.instance.exports.dag_viewer_x(c.keyCode);
-    });
-
     app.addEventListener("mousedown", (e) => {
         const coords = canvas_coords(e);
         mouse_click_pos = {x: coords.x, y: coords.y};
@@ -128,5 +123,11 @@ export function dag_viewer_init() {
         mouse_click_pos = {x: coords.x, y: coords.y};
 
         w.instance.exports.dag_viewer_drag(dx, dy);
+    });
+
+    app.addEventListener("wheel", (e) => {
+        const coords = canvas_coords(e);
+        const direction = e.deltaY < 0;
+        w.instance.exports.dag_viewer_zoom(coords.x, coords.y, direction);
     });
 }

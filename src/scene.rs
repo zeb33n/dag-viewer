@@ -120,4 +120,11 @@ impl Scene {
             y: (coord.y - self.camera.pos.y) * self.camera.zoom + self.screen_h / 2.0,
         }
     }
+
+    pub fn screen_to_world(&self, coord: &VecF2) -> VecF2 {
+        VecF2 {
+            x: (coord.x - self.screen_w / 2.0) / self.camera.zoom + self.camera.pos.x,
+            y: (coord.y - self.screen_h / 2.0) / self.camera.zoom + self.camera.pos.y,
+        }
+    }
 }

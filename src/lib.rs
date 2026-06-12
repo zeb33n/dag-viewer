@@ -47,7 +47,14 @@ pub extern "C" fn dag_viewer_zoom(x: f32, y: f32, direction: bool) -> () {
     draw(&*scene);
 }
 
-// Convert the cursor screen position to a world position before zooming.
-// Change the zoom.
-// Convert the same cursor screen position to a world position after zooming.
-// Move the camera by the difference.
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
+    let scene = SCENE.lock().unwrap();
+    for (i, _) in scene.nodes.iter().enumerate() {
+        if !scene.check_bound_circle(i, VecF2 { x: x, y: y }) {
+            continue;
+        }
+        scene.highlight_node(i);
+        return;
+    }
+}

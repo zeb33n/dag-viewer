@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use crate::drawing::DrawableNode;
+use crate::js;
 use crate::{data_types::*, model::*};
 use dot_parser::ast::{Graph, ID};
 
@@ -13,6 +16,7 @@ pub struct Scene {
     pub screen_w: f32,
     pub screen_h: f32,
     pub model: Model,
+    pub root: usize,
 }
 
 impl Scene {
@@ -30,6 +34,8 @@ impl Scene {
             screen_w: screen_w as f32,
             screen_h: screen_h as f32,
             model: model,
+            // TODO calculate this properly
+            root: 3,
         }
     }
 
@@ -43,6 +49,7 @@ impl Scene {
             screen_w: 0.0,
             screen_h: 0.0,
             model: Model::new_default(),
+            root: 0,
         }
     }
 
@@ -62,7 +69,16 @@ impl Scene {
                 label: String::from("node_3"),
                 dependents: vec![1],
             },
+            Node {
+                label: String::from("node_4"),
+                dependents: vec![0, 2, 4],
+            },
+            Node {
+                label: String::from("node_5"),
+                dependents: vec![],
+            },
         ];
+
         let line_1 = Line {
             a: VecF2 { x: 50.0, y: 50.0 },
             b: VecF2 { x: 100.0, y: 100.0 },
@@ -75,6 +91,24 @@ impl Scene {
             colour: 0x000000FF,
         };
 
+        let line_3 = Line {
+            a: VecF2 { x: 150.0, y: 0.0 },
+            b: VecF2 { x: 50.0, y: 50.0 },
+            colour: 0x000000FF,
+        };
+
+        let line_4 = Line {
+            a: VecF2 { x: 150.0, y: 0.0 },
+            b: VecF2 { x: 150.0, y: 50.0 },
+            colour: 0x000000FF,
+        };
+
+        let line_5 = Line {
+            a: VecF2 { x: 150.0, y: 0.0 },
+            b: VecF2 { x: 200.0, y: 50.0 },
+            colour: 0x000000FF,
+        };
+
         let path_1 = Path {
             from: 0,
             to: 1,
@@ -82,9 +116,27 @@ impl Scene {
         };
 
         let path_2 = Path {
-            from: 3,
+            from: 2,
             to: 1,
             line_segments: vec![line_2],
+        };
+
+        let path_3 = Path {
+            from: 3,
+            to: 0,
+            line_segments: vec![line_3],
+        };
+
+        let path_4 = Path {
+            from: 3,
+            to: 2,
+            line_segments: vec![line_4],
+        };
+
+        let path_5 = Path {
+            from: 3,
+            to: 4,
+            line_segments: vec![line_5],
         };
 
         let node_1 = DrawableNode {
@@ -111,7 +163,23 @@ impl Scene {
             colour: 0x0000FFFF,
         };
 
-        vec![node_1, node_2, node_3]
+        let node_4 = DrawableNode {
+            is_fake_node: false,
+            position: VecF2 { x: 150.0, y: 0.0 },
+            logical_node_handle: 3,
+            edges: vec![path_3, path_4, path_5],
+            colour: 0xFF00FFFF,
+        };
+
+        let node_5 = DrawableNode {
+            is_fake_node: false,
+            position: VecF2 { x: 200.0, y: 50.0 },
+            logical_node_handle: 4,
+            edges: vec![],
+            colour: 0xFFFF00FF,
+        };
+
+        vec![node_1, node_2, node_3, node_4, node_5]
     }
 
     pub fn world_to_screen(&self, coord: &VecF2) -> VecF2 {
@@ -126,5 +194,88 @@ impl Scene {
             x: (coord.x - self.screen_w / 2.0) / self.camera.zoom + self.camera.pos.x,
             y: (coord.y - self.screen_h / 2.0) / self.camera.zoom + self.camera.pos.y,
         }
+    }
+
+    pub fn get_bound_circle(&self, handle: usize) -> Circle {
+        let node = &self.nodes[handle];
+        Circle {
+            center: self.world_to_screen(&VecF2 {
+                x: node.position.x,
+                y: node.position.y,
+            }),
+            radius: 10.0 * self.camera.zoom,
+        }
+    }
+
+    pub fn check_bound_circle(&self, handle: usize, coord: VecF2) -> bool {
+        let circ = self.get_bound_circle(handle);
+        let dx = coord.x - circ.center.x;
+        let dy = coord.y - circ.center.y;
+
+        dx * dx + dy * dy <= circ.radius * circ.radius
+    }
+
+    pub fn highlight_node(&self, handle: usize) {
+        let mut nodes = self.get_reverse_dependencies(handle);
+        nodes.extend(self.get_dependencies(handle).iter());
+        for h in nodes.into_iter() {
+            js::log_str(self.model.get_node(h).label.as_ptr());
+        }
+    }
+
+    pub fn get_dependencies(&self, handle: usize) -> Vec<usize> {
+        let mut out: Vec<usize> = Vec::new();
+        self.recursive_dependencies(handle, &mut out);
+        return out;
+    }
+
+    fn recursive_dependencies(&self, handle: usize, out: &mut Vec<usize>) {
+        let node = &self.nodes[handle];
+        for e in node.edges.iter() {
+            if out.contains(&e.to) {
+                return;
+            };
+            out.push(e.to);
+            self.recursive_dependencies(e.to, out);
+        }
+    }
+
+    // TODO may need optimising in theory the filter
+    // needs only to be called once on the root node
+    pub fn get_reverse_dependencies(&self, handle: usize) -> Vec<usize> {
+        let mut seen: HashMap<usize, bool> = HashMap::new();
+        self.nodes
+            .iter()
+            .enumerate()
+            .map(|(i, _)| i)
+            .collect::<Vec<usize>>()
+            .into_iter()
+            .filter(|h| self.recursive_reverse_dependencies_filter(*h, handle, &mut seen))
+            .collect()
+    }
+
+    fn recursive_reverse_dependencies_filter(
+        &self,
+        handle: usize,
+        find: usize,
+        seen: &mut HashMap<usize, bool>,
+    ) -> bool {
+        if seen.contains_key(&handle) {
+            return *seen.get(&handle).unwrap();
+        }
+
+        if handle == find {
+            seen.insert(handle, true);
+            return true;
+        }
+
+        let node = &self.nodes[handle];
+
+        let out = node
+            .edges
+            .iter()
+            .any(|edge| self.recursive_reverse_dependencies_filter(edge.to, find, seen));
+        seen.insert(handle, out);
+        out
     }
 }

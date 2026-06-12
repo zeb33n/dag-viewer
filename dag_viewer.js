@@ -130,4 +130,9 @@ export function dag_viewer_init() {
         const direction = e.deltaY < 0;
         w.instance.exports.dag_viewer_zoom(coords.x, coords.y, direction);
     });
+
+    app.addEventListener("click", (e) => {
+        const coords = canvas_coords(e);
+        w.instance.exports.dag_viewer_click(coords.x, coords.y);
+    })
 }

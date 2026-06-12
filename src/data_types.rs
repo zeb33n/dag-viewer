@@ -6,4 +6,9 @@ pub struct VecF2 {
     pub y: f32,
 }
 
+pub struct Circle {
+    pub center: VecF2,
+    pub radius: f32,
+}
+
 pub type LogicalNodeHandle = usize;

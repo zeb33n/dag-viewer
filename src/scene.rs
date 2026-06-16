@@ -215,11 +215,15 @@ impl Scene {
         dx * dx + dy * dy <= circ.radius * circ.radius
     }
 
-    pub fn highlight_node(&self, handle: usize) {
+    pub fn highlight_node(&mut self, handle: usize) {
         let mut nodes = self.get_reverse_dependencies(handle);
         nodes.extend(self.get_dependencies(handle).iter());
+
         for h in nodes.into_iter() {
-            js::log_str(self.model.get_node(h).label.as_ptr());
+            let colour = self.nodes[h].colour;
+            let mut bytes = colour.to_be_bytes();
+            bytes[3] = 0x11;
+            self.nodes[h].colour = u32::from_be_bytes(bytes);
         }
     }
 

@@ -29,14 +29,14 @@ pub fn log(msg: &str) -> () {
     unsafe { js_internal::js_log(msg.as_ptr(), msg.len()) }
 }
 
-#[macro_export] 
+pub fn fill_string(x: f32, y: f32, s: &str, colour: Colour, size: f32) -> () {
+    unsafe { js_internal::js_fill_string(x, y, s.as_ptr(), s.len(), colour, size) }
+}
+
+#[macro_export]
 macro_rules! web_print {
     ($($t:tt)*) => {{
         let s = format!($($t)*);
-        unsafe { $crate::js::js_internal::js_log(s.as_ptr(), s.len()) }
+        $crate::js::log(&s)
     }};
-}
-
-pub fn fill_string(x: f32, y: f32, s: &str, colour: Colour, size: f32) -> () {
-    unsafe { js_internal::js_fill_string(x, y, s.as_ptr(), s.len(), colour, size) }
 }

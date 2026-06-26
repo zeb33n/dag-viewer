@@ -16,10 +16,10 @@ pub struct Camera {
 pub struct Scene {
     pub camera: Camera,
     pub nodes: Vec<DrawableNode>,
+    pub edges: Vec<Path>,
     pub screen_w: f32,
     pub screen_h: f32,
     pub model: Model,
-    pub root: usize,
 }
 
 /*
@@ -60,11 +60,11 @@ impl Scene {
                 zoom: 1.0,
             },
             nodes: vec![],
+            edges: vec![],
             screen_w: screen_w as f32,
             screen_h: screen_h as f32,
             model: Model::new(graph),
             // TODO calculate this properly
-            root: 3,
         }
     }
 
@@ -74,11 +74,11 @@ impl Scene {
                 pos: VecF2 { x: 0.0, y: 0.0 },
                 zoom: 1.0,
             },
-            nodes: Self::layout_test(&mut Model::new_default()),
+            nodes: vec![],
+            edges: vec![],
             screen_w: 0.0,
             screen_h: 0.0,
             model: Model::new_default(),
-            root: 0,
         }
     }
 
@@ -179,13 +179,12 @@ impl Scene {
             let mut itr_layer = from_layer;
             let mut itr_node = from_node;
             for layer in (from_layer + 1)..to_layer {
-                let mut end = by_layer[layer].len();
+                let end = by_layer[layer].len();
                 by_layer[layer].push(LayoutNodeWrapper {
                     node: DrawableNode {
                         is_fake_node: true,
                         position: VecF2 { x: 0.0, y: 0.0 },
                         logical_node_handle: 0,
-                        edges: vec![],
                         colour: 0,
                     },
                     layers: vec![],
@@ -214,7 +213,7 @@ impl Scene {
         let mut node = first_link.1;
 
         loop {
-            let mut n: &LayoutNodeWrapper = &by_layer[layer][node];
+            let n: &LayoutNodeWrapper = &by_layer[layer][node];
             path.line_segments.push(Line {
                 a: VecF2 {
                     x: start.x,
@@ -244,7 +243,7 @@ impl Scene {
         path
     }
 
-    fn add_drawable_connections(model: &Model, by_layer: &mut Vec<Vec<LayoutNodeWrapper>>) {
+    fn add_drawable_connections(&mut self, by_layer: &mut Vec<Vec<LayoutNodeWrapper>>) {
         let mut paths: Vec<(usize, usize, Path)> = vec![];
         // stupid 2 pass process because of borrow checker
         for i in 0..by_layer.len() {
@@ -256,7 +255,7 @@ impl Scene {
                 //assert!(by_layer[i][j].dependents.len() == model.get_node(by_layer[i][j].node.logical_node_handle).dependents.len());
                 for k in 0..by_layer[i][j].dependents.len() {
                     let wrapper = &by_layer[i][j];
-                    let logical = model.get_node(wrapper.node.logical_node_handle);
+                    let logical = self.model.get_node(wrapper.node.logical_node_handle);
                     let path = Self::create_path_to(
                         wrapper.node.position.clone(),
                         by_layer,
@@ -269,9 +268,7 @@ impl Scene {
             }
         }
         for (i, j, path) in paths {
-            //web_print!("PATH");
-            let mut wrapper = &mut by_layer[i][j];
-            wrapper.node.edges.push(path);
+            self.edges.push(path);
         }
     }
 
@@ -312,7 +309,7 @@ impl Scene {
 
     fn find_highest_layer_and_sort(nodes: &mut HashMap<String, LayoutNodeWrapper>) -> usize {
         let mut highest_layer: usize = 0;
-        for (k, v) in nodes {
+        for (_k, v) in nodes {
             //web_print!("key: {} val: {:?}", k, v.layers);
             v.layers.sort();
             v.layer = *v.layers.last().unwrap();
@@ -324,14 +321,9 @@ impl Scene {
     }
 
     pub fn layout(&mut self) -> () {
-        let b_test_mode = false;
-        if b_test_mode {
-            self.nodes = Self::layout_test(&mut self.model);
-        }
         let root: LogicalNodeHandle = self.model.get_root_node();
-        self.root;
         let node = self.model.get_node(root);
-        let label = node.label.as_str();
+        let _label = node.label.as_str();
         //web_print!("root: {} num dependents: {}", label, node.dependents.len());
         // for d in &node.dependents {
         //     let n = self.model.get_node(*d);
@@ -351,7 +343,7 @@ impl Scene {
         let highest_layer = Self::find_highest_layer_and_sort(&mut nodes);
         let mut by_layer: Vec<Vec<LayoutNodeWrapper>> = vec![vec![]; highest_layer + 1];
 
-        for (k, v) in &mut nodes {
+        for (_k, v) in &mut nodes {
             by_layer[v.layer].push(v.clone());
         }
 
@@ -387,7 +379,7 @@ impl Scene {
 
         // the layout is now finalized, add drawable node connections
 
-        Self::add_drawable_connections(&self.model, &mut by_layer);
+        self.add_drawable_connections(&mut by_layer);
 
         self.nodes = by_layer
             .into_iter()
@@ -395,133 +387,6 @@ impl Scene {
             .map(|x| x.node)
             //.filter(|x| !x.is_fake_node)
             .collect();
-    }
-
-    pub fn layout_test(model: &mut Model) -> Vec<DrawableNode> {
-        model.logical_nodes = vec![
-            Node {
-                label: String::from("node_1"),
-                dependents: vec![1],
-            },
-            Node {
-                label: String::from("node_2"),
-                dependents: vec![],
-            },
-            Node {
-                label: String::from("node_3"),
-                dependents: vec![1],
-            },
-            Node {
-                label: String::from("node_4"),
-                dependents: vec![0, 2, 4],
-            },
-            Node {
-                label: String::from("node_5"),
-                dependents: vec![],
-            },
-        ];
-
-        let line_1 = Line {
-            a: VecF2 { x: 50.0, y: 50.0 },
-            b: VecF2 { x: 100.0, y: 100.0 },
-            colour: 0x000000FF,
-        };
-
-        let line_2 = Line {
-            a: VecF2 { x: 150.0, y: 50.0 },
-            b: VecF2 { x: 100.0, y: 100.0 },
-            colour: 0x000000FF,
-        };
-
-        let line_3 = Line {
-            a: VecF2 { x: 150.0, y: 0.0 },
-            b: VecF2 { x: 50.0, y: 50.0 },
-            colour: 0x000000FF,
-        };
-
-        let line_4 = Line {
-            a: VecF2 { x: 150.0, y: 0.0 },
-            b: VecF2 { x: 150.0, y: 50.0 },
-            colour: 0x000000FF,
-        };
-
-        let line_5 = Line {
-            a: VecF2 { x: 150.0, y: 0.0 },
-            b: VecF2 { x: 200.0, y: 50.0 },
-            colour: 0x000000FF,
-        };
-
-        let path_1 = Path {
-            from: 0,
-            to: 1,
-            line_segments: vec![line_1],
-        };
-
-        let path_2 = Path {
-            from: 2,
-            to: 1,
-            line_segments: vec![line_2],
-        };
-
-        let path_3 = Path {
-            from: 3,
-            to: 0,
-            line_segments: vec![line_3],
-        };
-
-        let path_4 = Path {
-            from: 3,
-            to: 2,
-            line_segments: vec![line_4],
-        };
-
-        let path_5 = Path {
-            from: 3,
-            to: 4,
-            line_segments: vec![line_5],
-        };
-
-        let node_1 = DrawableNode {
-            is_fake_node: false,
-            position: VecF2 { x: 50.0, y: 50.0 },
-            logical_node_handle: 0,
-            edges: vec![path_1],
-            colour: 0xFF0000FF,
-        };
-
-        let node_2 = DrawableNode {
-            is_fake_node: false,
-            position: VecF2 { x: 100.0, y: 100.0 },
-            logical_node_handle: 1,
-            edges: vec![],
-            colour: 0x00FF00FF,
-        };
-
-        let node_3 = DrawableNode {
-            is_fake_node: false,
-            position: VecF2 { x: 150.0, y: 50.0 },
-            logical_node_handle: 2,
-            edges: vec![path_2],
-            colour: 0x0000FFFF,
-        };
-
-        let node_4 = DrawableNode {
-            is_fake_node: false,
-            position: VecF2 { x: 150.0, y: 0.0 },
-            logical_node_handle: 3,
-            edges: vec![path_3, path_4, path_5],
-            colour: 0xFF00FFFF,
-        };
-
-        let node_5 = DrawableNode {
-            is_fake_node: false,
-            position: VecF2 { x: 200.0, y: 50.0 },
-            logical_node_handle: 4,
-            edges: vec![],
-            colour: 0xFFFF00FF,
-        };
-
-        vec![node_1, node_2, node_3, node_4, node_5]
     }
 
     pub fn world_to_screen(&self, coord: &VecF2) -> VecF2 {
@@ -571,61 +436,5 @@ impl Scene {
         let mut bytes = self.nodes[handle].colour.to_be_bytes();
         bytes[3] = transparency;
         self.nodes[handle].colour = u32::from_be_bytes(bytes);
-    }
-
-    pub fn get_dependencies(&self, handle: usize) -> Vec<usize> {
-        let mut out: Vec<usize> = Vec::new();
-        self.recursive_dependencies(handle, &mut out);
-        return out;
-    }
-
-    fn recursive_dependencies(&self, handle: usize, out: &mut Vec<usize>) {
-        let node = &self.nodes[handle];
-        for e in node.edges.iter() {
-            if out.contains(&e.to) {
-                return;
-            };
-            out.push(e.to);
-            self.recursive_dependencies(e.to, out);
-        }
-    }
-
-    // TODO may need optimising in theory the filter
-    // needs only to be called once on the root node
-    pub fn get_reverse_dependencies(&self, handle: usize) -> Vec<usize> {
-        let mut seen: HashMap<usize, bool> = HashMap::new();
-        self.nodes
-            .iter()
-            .enumerate()
-            .map(|(i, _)| i)
-            .collect::<Vec<usize>>()
-            .into_iter()
-            .filter(|h| self.recursive_reverse_dependencies_filter(*h, handle, &mut seen))
-            .collect()
-    }
-
-    fn recursive_reverse_dependencies_filter(
-        &self,
-        handle: usize,
-        find: usize,
-        seen: &mut HashMap<usize, bool>,
-    ) -> bool {
-        if seen.contains_key(&handle) {
-            return *seen.get(&handle).unwrap();
-        }
-
-        if handle == find {
-            seen.insert(handle, true);
-            return true;
-        }
-
-        let node = &self.nodes[handle];
-
-        let out = node
-            .edges
-            .iter()
-            .any(|edge| self.recursive_reverse_dependencies_filter(edge.to, find, seen));
-        seen.insert(handle, out);
-        out
     }
 }

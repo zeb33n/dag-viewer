@@ -45,11 +45,11 @@ impl Model {
                 dot_parser::ast::Stmt::EdgeStmt(edge_stmt) => {
                     let from = match &edge_stmt.from {
                         Left(x) => x,
-                        Right(x) => panic!("not supported!"),
+                        Right(_x) => panic!("not supported!"),
                     };
                     let to = match &edge_stmt.next.to {
                         Left(x) => x,
-                        Right(x) => panic!("not supported!"),
+                        Right(_x) => panic!("not supported!"),
                     };
                     let h_from: LogicalNodeHandle = Self::find_node(&r, from.id.as_str()).unwrap();
                     let h_to: LogicalNodeHandle = Self::find_node(&r, to.id.as_str()).unwrap();
@@ -61,13 +61,13 @@ impl Model {
                         }
                     }
 
-                    if (!b_already_present) {
+                    if !b_already_present  {
                         r[h_from].dependents.push(h_to);
                     }
                 }
-                dot_parser::ast::Stmt::AttrStmt(attr_stmt) => todo!(),
+                dot_parser::ast::Stmt::AttrStmt(_attr_stmt) => todo!(),
                 dot_parser::ast::Stmt::IDEq(_, _) => todo!(),
-                dot_parser::ast::Stmt::Subgraph(subgraph) => todo!(),
+                dot_parser::ast::Stmt::Subgraph(_subgraph) => todo!(),
             }
         }
         for n in &mut r {

@@ -1,6 +1,6 @@
 use crate::scene::Scene;
-use crate::{data_types::*, js};
 use crate::web_print;
+use crate::{data_types::*, js};
 
 #[derive(Clone)]
 pub struct Line {
@@ -19,10 +19,10 @@ pub struct Path {
 
 impl Path {
     pub fn new(to: LogicalNodeHandle, from: LogicalNodeHandle) -> Self {
-        Self{
-            from :from,
-            to : to,
-            line_segments : vec![]
+        Self {
+            from: from,
+            to: to,
+            line_segments: vec![],
         }
     }
 }
@@ -38,12 +38,12 @@ pub struct DrawableNode {
 
 impl DrawableNode {
     pub fn new(handle: LogicalNodeHandle) -> Self {
-        Self { 
-            is_fake_node: false, 
-            position: VecF2 { x: 0.0, y: 0.0 }, 
+        Self {
+            is_fake_node: false,
+            position: VecF2 { x: 0.0, y: 0.0 },
             logical_node_handle: handle,
-            edges: vec![], 
-            colour: 0xFF0000FF
+            edges: vec![],
+            colour: 0xFF000055,
         }
     }
 }
@@ -61,13 +61,13 @@ pub fn draw(scene: &Scene) -> () {
         }
     }
     for node in scene.nodes.iter() {
+        if node.is_fake_node {
+            continue;
+        }
         let p = scene.world_to_screen(&node.position);
-        let radius = 10.0 * scene.camera.zoom;
+        let radius = 30.0 * scene.camera.zoom;
         js::fill_circ(p.x, p.y, radius, node.colour);
-        let text: &str = &scene
-            .model
-            .get_node(node.logical_node_handle)
-            .label;
+        let text: &str = &scene.model.get_node(node.logical_node_handle).label;
         js::fill_string(p.x + radius, p.y, text, 0x000000FF, radius * 2.0);
     }
 }

@@ -2,12 +2,11 @@ use std::collections::HashMap;
 
 use crate::drawing::DrawableNode;
 
-use crate::js;
 use crate::{data_types::*, model::*};
 
-use dot_parser::ast::{Graph, ID};
 use crate::drawing::*;
 use crate::web_print;
+use dot_parser::ast::{Graph, ID};
 
 pub struct Camera {
     pub pos: VecF2,
@@ -23,7 +22,7 @@ pub struct Scene {
     pub root: usize,
 }
 
-/* 
+/*
     Wraps a DrawableNode, adds variables needed for the layout algorithm.
     The very last part of the layout function extracts the inner DrawableNode.
 */
@@ -47,12 +46,11 @@ struct LayoutNodeWrapper {
         These are notional connections that are then made concrete by adding
         paths to the Drawable node
     */
-    dependents: Vec<(usize, usize)>
+    dependents: Vec<(usize, usize)>,
 }
 
 impl Scene {
     pub fn new(screen_w: i32, screen_h: i32, graph: &Graph<(ID<'_>, ID<'_>)>) -> Self {
-        
         Self {
             camera: Camera {
                 pos: VecF2 {
@@ -84,7 +82,12 @@ impl Scene {
         }
     }
 
-    fn gather_nodes(&self, node: &Node, out: &mut HashMap<String, LayoutNodeWrapper>, on_layer: usize) -> () {
+    fn gather_nodes(
+        &self,
+        node: &Node,
+        out: &mut HashMap<String, LayoutNodeWrapper>,
+        on_layer: usize,
+    ) -> () {
         if on_layer > 5 {
             return;
         }
@@ -92,22 +95,29 @@ impl Scene {
             let n: &Node = self.model.get_node(*h_node);
             if let Some(val) = out.get_mut(&n.label) {
                 val.layers.push(on_layer);
-            }
-            else {
-                out.insert(n.label.clone(), LayoutNodeWrapper{
-                    layers: vec![on_layer],
-                    node: DrawableNode::new(*h_node),
-                    layer: 0,
-                    dependents: vec![]
-                });
+            } else {
+                out.insert(
+                    n.label.clone(),
+                    LayoutNodeWrapper {
+                        layers: vec![on_layer],
+                        node: DrawableNode::new(*h_node),
+                        layer: 0,
+                        dependents: vec![],
+                    },
+                );
             }
             self.gather_nodes(n, out, on_layer + 1);
         }
     }
 
-    fn find_dependent(dependent: LogicalNodeHandle, by_layer: &Vec<Vec<LayoutNodeWrapper>>, start_layer: usize) -> Option<(usize, usize)> {
+    fn find_dependent(
+        dependent: LogicalNodeHandle,
+        by_layer: &Vec<Vec<LayoutNodeWrapper>>,
+        start_layer: usize,
+    ) -> Option<(usize, usize)> {
         for i in start_layer..by_layer.len() {
-            for j in 0..by_layer[i].len() {//wrapper in &by_layer[i] {
+            for j in 0..by_layer[i].len() {
+                //wrapper in &by_layer[i] {
                 let wrapper = &by_layer[i][j];
                 if wrapper.node.logical_node_handle == dependent {
                     //web_print!("some");
@@ -140,17 +150,16 @@ impl Scene {
                 //web_print!("{} {:?}", model.get_node(wrapper.node.logical_node_handle).label, model.get_node(wrapper.node.logical_node_handle).dependents);
                 Self::print_node(model, wrapper);
                 for d in &model.get_node(wrapper.node.logical_node_handle).dependents {
-                    web_print!("finding dependent {}", model.get_node(*d).label);               
-                    match Self::find_dependent(*d, by_layer, i+1) {
+                    web_print!("finding dependent {}", model.get_node(*d).label);
+                    match Self::find_dependent(*d, by_layer, i + 1) {
                         Some((layer, node)) => {
-                            connections.push(
-                                (i, j, layer, node)
-                            );
+                            connections.push((i, j, layer, node));
                             web_print!("found dependent in layer {}", layer);
-                        },
-                        None => { web_print!("couldn't find dependent"); }
+                        }
+                        None => {
+                            web_print!("couldn't find dependent");
+                        }
                     }
-                    
                 }
             }
         }
@@ -160,52 +169,67 @@ impl Scene {
                 /*
                     The simple case
                 */
-                by_layer[from_layer][from_node].dependents.push((to_layer, to_node));
+                by_layer[from_layer][from_node]
+                    .dependents
+                    .push((to_layer, to_node));
                 continue;
             }
-            
+
             // add fake nodes
             let mut itr_layer = from_layer;
             let mut itr_node = from_node;
             for layer in (from_layer + 1)..to_layer {
                 let mut end = by_layer[layer].len();
-                by_layer[layer].push(LayoutNodeWrapper { 
-                    node: DrawableNode { 
-                        is_fake_node: true, 
+                by_layer[layer].push(LayoutNodeWrapper {
+                    node: DrawableNode {
+                        is_fake_node: true,
                         position: VecF2 { x: 0.0, y: 0.0 },
-                        logical_node_handle: 0, 
+                        logical_node_handle: 0,
                         edges: vec![],
-                        colour: 0
+                        colour: 0,
                     },
                     layers: vec![],
                     layer: layer,
-                    dependents: vec![]
+                    dependents: vec![],
                 });
-                by_layer[itr_layer][itr_node].dependents.push((
-                    layer, end
-                ));
+                by_layer[itr_layer][itr_node].dependents.push((layer, end));
                 itr_layer = layer;
                 itr_node = end;
             }
-            by_layer[itr_layer][itr_node].dependents.push((
-                to_layer, to_node
-            ));
+            by_layer[itr_layer][itr_node]
+                .dependents
+                .push((to_layer, to_node));
         }
     }
 
-    fn create_path_to(mut start: VecF2, by_layer: &mut Vec<Vec<LayoutNodeWrapper>>, first_link: (usize, usize), to: LogicalNodeHandle, from : LogicalNodeHandle) -> Path {
+    fn create_path_to(
+        mut start: VecF2,
+        by_layer: &mut Vec<Vec<LayoutNodeWrapper>>,
+        first_link: (usize, usize),
+        to: LogicalNodeHandle,
+        from: LogicalNodeHandle,
+    ) -> Path {
         let mut path: Path = Path::new(to, from);
         let mut layer = first_link.0;
         let mut node = first_link.1;
-        
+
         loop {
             let mut n: &LayoutNodeWrapper = &by_layer[layer][node];
-            path.line_segments.push(Line { 
-                a: VecF2 { x: start.x, y: start.y },
-                b: VecF2 { x: n.node.position.x, y: n.node.position.y },
-                colour: 0x000000FF 
+            path.line_segments.push(Line {
+                a: VecF2 {
+                    x: start.x,
+                    y: start.y,
+                },
+                b: VecF2 {
+                    x: n.node.position.x,
+                    y: n.node.position.y,
+                },
+                colour: 0x00000055,
             });
-            start = VecF2 { x: n.node.position.x, y: n.node.position.y };
+            start = VecF2 {
+                x: n.node.position.x,
+                y: n.node.position.y,
+            };
             if n.node.is_fake_node {
                 if n.dependents.len() == 0 {
                     web_print!("LOLOLOL")
@@ -213,8 +237,7 @@ impl Scene {
                 assert!(n.dependents.len() == 1);
                 layer = n.dependents[0].0;
                 node = n.dependents[0].1;
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -235,14 +258,13 @@ impl Scene {
                     let wrapper = &by_layer[i][j];
                     let logical = model.get_node(wrapper.node.logical_node_handle);
                     let path = Self::create_path_to(
-                        wrapper.node.position.clone(), 
-                        by_layer, 
-                        wrapper.dependents[k], 
-                        logical.dependents[k], 
-                        wrapper.node.logical_node_handle);
-                    paths.push((
-                        i, j , path
-                    ));
+                        wrapper.node.position.clone(),
+                        by_layer,
+                        wrapper.dependents[k],
+                        logical.dependents[k],
+                        wrapper.node.logical_node_handle,
+                    );
+                    paths.push((i, j, path));
                 }
             }
         }
@@ -264,8 +286,7 @@ impl Scene {
                     /* any dependencies in the final layer? (they shouldn't be anywhere else) */
                     //Self::print_node(model, wrapper);
                     match Self::find_dependent(dep, layers, layers.len() - 1) {
-                        None => {
-                        }
+                        None => {}
                         Some(_) => {
                             deps_in_top = true;
                             break;
@@ -276,8 +297,7 @@ impl Scene {
                     let mut cpy = wrapper.clone();
                     cpy.layer = layers.len();
                     new_layer.push(cpy);
-                }
-                else {
+                } else {
                     top_layer_copy.push(wrapper.clone());
                 }
             }
@@ -318,12 +338,15 @@ impl Scene {
         //     web_print!("{}", n.label);
         // }
         let mut nodes: HashMap<String, LayoutNodeWrapper> = HashMap::new();
-        nodes.insert(node.label.clone(), LayoutNodeWrapper{
-            layers: vec![0],
-            node: DrawableNode::new(root),
-            layer: 0,
-            dependents: vec![]
-        });
+        nodes.insert(
+            node.label.clone(),
+            LayoutNodeWrapper {
+                layers: vec![0],
+                node: DrawableNode::new(root),
+                layer: 0,
+                dependents: vec![],
+            },
+        );
         self.gather_nodes(node, &mut nodes, 1);
         let highest_layer = Self::find_highest_layer_and_sort(&mut nodes);
         let mut by_layer: Vec<Vec<LayoutNodeWrapper>> = vec![vec![]; highest_layer + 1];
@@ -344,7 +367,6 @@ impl Scene {
         //     }
         // }
 
-
         let mut column_start: VecF2 = VecF2 { x: 0.0, y: 0.0 };
         let column_width = 1000.0;
         let column_height = 100.0;
@@ -352,12 +374,18 @@ impl Scene {
             let mut cursor = column_start.clone();
             for node in layer {
                 node.node.position = cursor.clone();
-                cursor += VecF2 { x: 0.0, y: column_height };
+                cursor += VecF2 {
+                    x: 0.0,
+                    y: column_height,
+                };
             }
-            column_start += VecF2 { x: column_width, y: 0.0 }
+            column_start += VecF2 {
+                x: column_width,
+                y: 0.0,
+            }
         }
 
-        // the layout is now finalized, add drawable node connections 
+        // the layout is now finalized, add drawable node connections
 
         Self::add_drawable_connections(&self.model, &mut by_layer);
 
@@ -517,7 +545,7 @@ impl Scene {
                 x: node.position.x,
                 y: node.position.y,
             }),
-            radius: 10.0 * self.camera.zoom,
+            radius: 30.0 * self.camera.zoom,
         }
     }
 
@@ -529,13 +557,20 @@ impl Scene {
         dx * dx + dy * dy <= circ.radius * circ.radius
     }
 
-    pub fn highlight_node(&self, handle: usize) {
-        let mut nodes = self.get_reverse_dependencies(handle);
-        nodes.extend(self.get_dependencies(handle).iter());
-        for h in nodes.into_iter() {
-            //js::log_str(self.model.get_node(h).label.as_ptr());
-            //web_print!("{}", self.model.get_node(h).label);
+    pub fn highlight_node(&mut self, handle: usize) {
+        self.set_node_transparency(handle, 0xFF);
+        for i in 0..self.nodes.len() {
+            if i == handle {
+                continue;
+            }
+            self.set_node_transparency(i, 0x55);
         }
+    }
+
+    pub fn set_node_transparency(&mut self, handle: usize, transparency: u8) {
+        let mut bytes = self.nodes[handle].colour.to_be_bytes();
+        bytes[3] = transparency;
+        self.nodes[handle].colour = u32::from_be_bytes(bytes);
     }
 
     pub fn get_dependencies(&self, handle: usize) -> Vec<usize> {

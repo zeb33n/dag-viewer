@@ -53,12 +53,14 @@ pub extern "C" fn dag_viewer_zoom(x: f32, y: f32, direction: bool) -> () {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
-    let scene = SCENE.lock().unwrap();
+    let mut scene = SCENE.lock().unwrap();
     for (i, _) in scene.nodes.iter().enumerate() {
         if !scene.check_bound_circle(i, VecF2 { x: x, y: y }) {
             continue;
         }
+        web_print!("{}", i);
         scene.highlight_node(i);
-        return;
+        break;
     }
+    draw(&*scene);
 }

@@ -5,14 +5,8 @@ use dot_parser::ast::{
     Graph,
 };
 
-#[derive(Debug)]
-pub struct Node {
-    pub label: String,
-    pub dependents: Vec<LogicalNodeHandle>,
-}
-
 pub struct Model {
-    pub logical_nodes: Vec<Node>,
+    pub nodes: Vec<Node>,
 }
 
 pub fn decode_url_encoded_string(encoded_str: &str) -> String {
@@ -20,7 +14,7 @@ pub fn decode_url_encoded_string(encoded_str: &str) -> String {
 }
 
 impl Model {
-    fn find_node(nodes: &Vec<Node>, name: &str) -> Option<LogicalNodeHandle> {
+    fn find_node(nodes: &Vec<Node>, name: &str) -> Option<NodeHandle> {
         for i in 0..nodes.len() {
             if nodes[i].label == name {
                 return Some(i);
@@ -37,10 +31,7 @@ impl Model {
         for s in stmts {
             match s {
                 dot_parser::ast::Stmt::NodeStmt(node_stmt) => {
-                    r.push(Node {
-                        label: node_stmt.name().to_string(),
-                        dependents: vec![],
-                    });
+                    r.push(Node::new(node_stmt.name().to_string()));
                 }
                 dot_parser::ast::Stmt::EdgeStmt(edge_stmt) => {
                     let from = match &edge_stmt.from {
@@ -51,8 +42,8 @@ impl Model {
                         Left(x) => x,
                         Right(_x) => panic!("not supported!"),
                     };
-                    let h_from: LogicalNodeHandle = Self::find_node(&r, from.id.as_str()).unwrap();
-                    let h_to: LogicalNodeHandle = Self::find_node(&r, to.id.as_str()).unwrap();
+                    let h_from: NodeHandle = Self::find_node(&r, from.id.as_str()).unwrap();
+                    let h_to: NodeHandle = Self::find_node(&r, to.id.as_str()).unwrap();
                     // hack begin - why is it adding duplicates in the first place?
                     let mut b_already_present = false;
                     for i in &r[h_from].dependents {
@@ -61,7 +52,7 @@ impl Model {
                         }
                     }
 
-                    if !b_already_present  {
+                    if !b_already_present {
                         r[h_from].dependents.push(h_to);
                     }
                 }
@@ -77,31 +68,29 @@ impl Model {
     }
 
     pub fn new_default() -> Self {
-        Self {
-            logical_nodes: vec![],
-        }
+        Self { nodes: vec![] }
     }
 
     pub fn new(graph: &Graph<(dot_parser::ast::ID<'_>, dot_parser::ast::ID<'_>)>) -> Self {
         Self {
-            logical_nodes: dbg!(Self::get_logical_nodes(graph)), // crashes
+            nodes: dbg!(Self::get_logical_nodes(graph)), // crashes
         }
     }
 
-    pub fn get_node(&self, h_node: LogicalNodeHandle) -> &Node {
-        &self.logical_nodes[h_node]
+    pub fn get_node(&self, h_node: NodeHandle) -> &Node {
+        &self.nodes[h_node]
     }
 
-    pub fn get_root_node(&self) -> LogicalNodeHandle {
-        web_print!("num nodes {}", self.logical_nodes.len());
-        let mut roots: Vec<LogicalNodeHandle> = vec![];
-        for i in 0..self.logical_nodes.len() {
+    pub fn get_root_node(&self) -> NodeHandle {
+        web_print!("num nodes {}", self.nodes.len());
+        let mut roots: Vec<NodeHandle> = vec![];
+        for i in 0..self.nodes.len() {
             let mut depended_on: bool = false;
-            for j in 0..self.logical_nodes.len() {
+            for j in 0..self.nodes.len() {
                 if j == i {
                     continue;
                 }
-                let node: &Node = &self.logical_nodes[j];
+                let node: &Node = &self.nodes[j];
                 for h_node in &node.dependents {
                     if *h_node == i {
                         depended_on = true;

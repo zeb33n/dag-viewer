@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
-use crate::drawing::DrawableNode;
+use std::collections::{HashMap, HashSet};
 
 use crate::{data_types::*, model::*};
 
-use crate::drawing::*;
 use crate::web_print;
 use dot_parser::ast::{Graph, ID};
 
@@ -15,7 +12,7 @@ pub struct Camera {
 
 pub struct Scene {
     pub camera: Camera,
-    pub nodes: Vec<DrawableNode>,
+    pub nodes: Vec<usize>,
     pub edges: Vec<Path>,
     pub screen_w: f32,
     pub screen_h: f32,
@@ -28,7 +25,7 @@ pub struct Scene {
 */
 #[derive(Clone)]
 struct LayoutNodeWrapper {
-    node: DrawableNode,
+    handle: usize,
 
     /*
         which layers is the node in?
@@ -100,7 +97,7 @@ impl Scene {
                     n.label.clone(),
                     LayoutNodeWrapper {
                         layers: vec![on_layer],
-                        node: DrawableNode::new(*h_node),
+                        handle: *h_node,
                         layer: 0,
                         dependents: vec![],
                     },
@@ -111,7 +108,7 @@ impl Scene {
     }
 
     fn find_dependent(
-        dependent: LogicalNodeHandle,
+        dependent: NodeHandle,
         by_layer: &Vec<Vec<LayoutNodeWrapper>>,
         start_layer: usize,
     ) -> Option<(usize, usize)> {
@@ -119,7 +116,7 @@ impl Scene {
             for j in 0..by_layer[i].len() {
                 //wrapper in &by_layer[i] {
                 let wrapper = &by_layer[i][j];
-                if wrapper.node.logical_node_handle == dependent {
+                if wrapper.handle == dependent {
                     //web_print!("some");
                     return Some((i, j));
                 }
@@ -129,28 +126,15 @@ impl Scene {
         None
     }
 
-    fn print_node(model: &Model, wrapper: &LayoutNodeWrapper) -> () {
-        let inner = model.get_node(wrapper.node.logical_node_handle);
-        let mut string = format!("{}", inner.label);
-        string += " [ ";
-        for node_h in &inner.dependents {
-            let h = *node_h;
-            string += format!("{}, ", model.get_node(h).label).as_str();
-        }
-        string += " ]";
-        web_print!("{}", string);
-    }
-
-    fn connect_nodes(by_layer: &mut Vec<Vec<LayoutNodeWrapper>>, model: &Model) -> () {
+    fn connect_nodes(&mut self, by_layer: &mut Vec<Vec<LayoutNodeWrapper>>) -> () {
         let mut connections: Vec<(usize, usize, usize, usize)> = Vec::new(); // (from_layer, from_node, to_layer, to_node)
         for i in 0..by_layer.len() {
             let layer = &by_layer[i];
             for j in 0..layer.len() {
                 let wrapper = &layer[j];
                 //web_print!("{} {:?}", model.get_node(wrapper.node.logical_node_handle).label, model.get_node(wrapper.node.logical_node_handle).dependents);
-                Self::print_node(model, wrapper);
-                for d in &model.get_node(wrapper.node.logical_node_handle).dependents {
-                    web_print!("finding dependent {}", model.get_node(*d).label);
+                for d in &self.model.get_node(wrapper.handle).dependents {
+                    web_print!("finding dependent {}", self.model.get_node(*d).label);
                     match Self::find_dependent(*d, by_layer, i + 1) {
                         Some((layer, node)) => {
                             connections.push((i, j, layer, node));
@@ -180,13 +164,9 @@ impl Scene {
             let mut itr_node = from_node;
             for layer in (from_layer + 1)..to_layer {
                 let end = by_layer[layer].len();
+                self.model.nodes.push(Node::new_fake_node());
                 by_layer[layer].push(LayoutNodeWrapper {
-                    node: DrawableNode {
-                        is_fake_node: true,
-                        position: VecF2 { x: 0.0, y: 0.0 },
-                        logical_node_handle: 0,
-                        colour: 0,
-                    },
+                    handle: self.model.nodes.len() - 1,
                     layers: vec![],
                     layer: layer,
                     dependents: vec![],
@@ -202,11 +182,12 @@ impl Scene {
     }
 
     fn create_path_to(
+        &self,
         mut start: VecF2,
         by_layer: &mut Vec<Vec<LayoutNodeWrapper>>,
         first_link: (usize, usize),
-        to: LogicalNodeHandle,
-        from: LogicalNodeHandle,
+        to: NodeHandle,
+        from: NodeHandle,
     ) -> Path {
         let mut path: Path = Path::new(to, from);
         let mut layer = first_link.0;
@@ -220,16 +201,16 @@ impl Scene {
                     y: start.y,
                 },
                 b: VecF2 {
-                    x: n.node.position.x,
-                    y: n.node.position.y,
+                    x: self.model.nodes[n.handle].position.x,
+                    y: self.model.nodes[n.handle].position.y,
                 },
                 colour: 0x00000055,
             });
             start = VecF2 {
-                x: n.node.position.x,
-                y: n.node.position.y,
+                x: self.model.nodes[n.handle].position.x,
+                y: self.model.nodes[n.handle].position.y,
             };
-            if n.node.is_fake_node {
+            if self.model.nodes[n.handle].is_fake_node {
                 if n.dependents.len() == 0 {
                     web_print!("LOLOLOL")
                 }
@@ -249,26 +230,30 @@ impl Scene {
         for i in 0..by_layer.len() {
             for j in 0..by_layer[i].len() {
                 //let wrapper = &by_layer[i][j];
-                if by_layer[i][j].node.is_fake_node {
+                if self.model.get_node(by_layer[i][j].handle).is_fake_node {
                     continue;
                 }
                 //assert!(by_layer[i][j].dependents.len() == model.get_node(by_layer[i][j].node.logical_node_handle).dependents.len());
                 for k in 0..by_layer[i][j].dependents.len() {
                     let wrapper = &by_layer[i][j];
-                    let logical = self.model.get_node(wrapper.node.logical_node_handle);
-                    let path = Self::create_path_to(
-                        wrapper.node.position.clone(),
+                    let logical = self.model.get_node(wrapper.handle);
+                    let path = self.create_path_to(
+                        self.model.nodes[wrapper.handle].position.clone(),
                         by_layer,
                         wrapper.dependents[k],
                         logical.dependents[k],
-                        wrapper.node.logical_node_handle,
+                        wrapper.handle,
                     );
                     paths.push((i, j, path));
                 }
             }
         }
         for (i, j, path) in paths {
+            let wrapper = &mut by_layer[i][j];
             self.edges.push(path);
+            self.model.nodes[wrapper.handle]
+                .edges
+                .push(self.edges.len() - 1);
         }
     }
 
@@ -278,7 +263,7 @@ impl Scene {
             let mut new_layer: Vec<LayoutNodeWrapper> = vec![];
             for wrapper in &layers[layers.len() - 1] {
                 let mut deps_in_top = false;
-                for d in &model.get_node(wrapper.node.logical_node_handle).dependents {
+                for d in &model.get_node(wrapper.handle).dependents {
                     let dep = *d;
                     /* any dependencies in the final layer? (they shouldn't be anywhere else) */
                     //Self::print_node(model, wrapper);
@@ -321,7 +306,7 @@ impl Scene {
     }
 
     pub fn layout(&mut self) -> () {
-        let root: LogicalNodeHandle = self.model.get_root_node();
+        let root: NodeHandle = self.model.get_root_node();
         let node = self.model.get_node(root);
         let _label = node.label.as_str();
         //web_print!("root: {} num dependents: {}", label, node.dependents.len());
@@ -334,7 +319,7 @@ impl Scene {
             node.label.clone(),
             LayoutNodeWrapper {
                 layers: vec![0],
-                node: DrawableNode::new(root),
+                handle: root,
                 layer: 0,
                 dependents: vec![],
             },
@@ -349,7 +334,7 @@ impl Scene {
 
         Self::recursively_add_layers(&mut by_layer, &self.model);
 
-        Self::connect_nodes(&mut by_layer, &self.model);
+        self.connect_nodes(&mut by_layer);
 
         // for i in 0..by_layer.len() {
         //     web_print!("layer {} size: {}", i, by_layer[i].len());
@@ -365,7 +350,7 @@ impl Scene {
         for layer in &mut by_layer {
             let mut cursor = column_start.clone();
             for node in layer {
-                node.node.position = cursor.clone();
+                self.model.nodes[node.handle].position = cursor.clone();
                 cursor += VecF2 {
                     x: 0.0,
                     y: column_height,
@@ -384,7 +369,7 @@ impl Scene {
         self.nodes = by_layer
             .into_iter()
             .flatten()
-            .map(|x| x.node)
+            .map(|x| x.handle)
             //.filter(|x| !x.is_fake_node)
             .collect();
     }
@@ -404,7 +389,7 @@ impl Scene {
     }
 
     pub fn get_bound_circle(&self, handle: usize) -> Circle {
-        let node = &self.nodes[handle];
+        let node = &self.model.nodes[handle];
         Circle {
             center: self.world_to_screen(&VecF2 {
                 x: node.position.x,
@@ -423,18 +408,85 @@ impl Scene {
     }
 
     pub fn highlight_node(&mut self, handle: usize) {
-        self.set_node_transparency(handle, 0xFF);
+        let (mut nodes, mut edges) = self.highlight_dependencies(handle);
+        let (nodes_i, edges_i) = self.highlight_dependents(handle);
+        nodes.extend(nodes_i.iter());
+        edges.extend(edges_i.iter());
+
         for i in 0..self.nodes.len() {
-            if i == handle {
-                continue;
-            }
-            self.set_node_transparency(i, 0x55);
+            let h = &self.nodes[i];
+            let transparency = if nodes.contains(h) { 0xFF } else { 0x55 };
+            self.set_node_transparency(*h, transparency);
+        }
+
+        for i in 0..self.edges.len() {
+            let transparency = if edges.contains(&i) { 0xFF } else { 0x55 };
+            self.set_edge_transparency(i, transparency);
         }
     }
 
-    pub fn set_node_transparency(&mut self, handle: usize, transparency: u8) {
-        let mut bytes = self.nodes[handle].colour.to_be_bytes();
+    fn set_node_transparency(&mut self, handle: usize, transparency: u8) {
+        let mut bytes = self.model.nodes[handle].colour.to_be_bytes();
         bytes[3] = transparency;
-        self.nodes[handle].colour = u32::from_be_bytes(bytes);
+        self.model.nodes[handle].colour = u32::from_be_bytes(bytes);
+    }
+
+    fn set_edge_transparency(&mut self, handle: usize, transparency: u8) {
+        for line in self.edges[handle].line_segments.iter_mut() {
+            let mut bytes = line.colour.to_be_bytes();
+            bytes[3] = transparency;
+            line.colour = u32::from_be_bytes(bytes);
+        }
+    }
+
+    fn highlight_dependencies(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
+        let mut visited: HashSet<usize> = HashSet::new();
+        let mut queue = vec![handle];
+        let mut edges = vec![];
+        let mut nodes = vec![];
+
+        while let Some(h) = queue.pop() {
+            if !visited.insert(h) {
+                continue;
+            }
+            nodes.push(h);
+            for edge_handle in self.model.nodes[h].edges.iter() {
+                edges.push(*edge_handle);
+                queue.push(self.edges[*edge_handle].to);
+            }
+        }
+
+        (nodes, edges)
+    }
+
+    fn get_incoming_edges(&self, handle: usize) -> Vec<usize> {
+        let mut out: Vec<usize> = Vec::new();
+        for (i, edge) in self.edges.iter().enumerate() {
+            if edge.to == handle {
+                out.push(i);
+            }
+        }
+        out
+    }
+
+    fn highlight_dependents(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
+        let mut visited: HashSet<usize> = HashSet::new();
+        let mut queue = vec![handle];
+        let mut edges = vec![];
+        let mut nodes = vec![];
+
+        while let Some(h) = queue.pop() {
+            if !visited.insert(h) {
+                continue;
+            }
+            nodes.push(h);
+            let edge_handles = self.get_incoming_edges(h);
+            for edge_handle in edge_handles.iter() {
+                edges.push(*edge_handle);
+                queue.push(self.edges[*edge_handle].from);
+            }
+        }
+
+        (nodes, edges)
     }
 }

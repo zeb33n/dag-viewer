@@ -126,28 +126,15 @@ impl Scene {
         None
     }
 
-    fn print_node(model: &Model, wrapper: &LayoutNodeWrapper) -> () {
-        let inner = model.get_node(wrapper.handle);
-        let mut string = format!("{}", inner.label);
-        string += " [ ";
-        for node_h in &inner.dependents {
-            let h = *node_h;
-            string += format!("{}, ", model.get_node(h).label).as_str();
-        }
-        string += " ]";
-        web_print!("{}", string);
-    }
-
-    fn connect_nodes(by_layer: &mut Vec<Vec<LayoutNodeWrapper>>, model: &Model) -> () {
+    fn connect_nodes(&mut self, by_layer: &mut Vec<Vec<LayoutNodeWrapper>>) -> () {
         let mut connections: Vec<(usize, usize, usize, usize)> = Vec::new(); // (from_layer, from_node, to_layer, to_node)
         for i in 0..by_layer.len() {
             let layer = &by_layer[i];
             for j in 0..layer.len() {
                 let wrapper = &layer[j];
                 //web_print!("{} {:?}", model.get_node(wrapper.node.logical_node_handle).label, model.get_node(wrapper.node.logical_node_handle).dependents);
-                Self::print_node(model, wrapper);
-                for d in &model.get_node(wrapper.handle).dependents {
-                    web_print!("finding dependent {}", model.get_node(*d).label);
+                for d in &self.model.get_node(wrapper.handle).dependents {
+                    web_print!("finding dependent {}", self.model.get_node(*d).label);
                     match Self::find_dependent(*d, by_layer, i + 1) {
                         Some((layer, node)) => {
                             connections.push((i, j, layer, node));
@@ -177,8 +164,9 @@ impl Scene {
             let mut itr_node = from_node;
             for layer in (from_layer + 1)..to_layer {
                 let end = by_layer[layer].len();
+                self.model.nodes.push(Node::new_fake_node());
                 by_layer[layer].push(LayoutNodeWrapper {
-                    handle: 0,
+                    handle: self.model.nodes.len() - 1,
                     layers: vec![],
                     layer: layer,
                     dependents: vec![],
@@ -346,7 +334,7 @@ impl Scene {
 
         Self::recursively_add_layers(&mut by_layer, &self.model);
 
-        Self::connect_nodes(&mut by_layer, &self.model);
+        self.connect_nodes(&mut by_layer);
 
         // for i in 0..by_layer.len() {
         //     web_print!("layer {} size: {}", i, by_layer[i].len());

@@ -408,14 +408,21 @@ impl Scene {
     }
 
     pub fn highlight_node(&mut self, handle: usize) {
-        self.highlight_dependencies(handle);
-        // self.set_node_transparency(handle, 0xFF);
-        // for i in 0..self.nodes.len() {
-        //     if i == handle {
-        //         continue;
-        //     }
-        //     self.set_node_transparency(i, 0x55);
-        // }
+        let (mut nodes, mut edges) = self.highlight_dependencies(handle);
+        let (nodes_i, edges_i) = self.highlight_dependents(handle);
+        nodes.extend(nodes_i.iter());
+        edges.extend(edges_i.iter());
+
+        for i in 0..self.nodes.len() {
+            let h = &self.nodes[i];
+            let transparency = if nodes.contains(h) { 0xFF } else { 0x55 };
+            self.set_node_transparency(*h, transparency);
+        }
+
+        for i in 0..self.edges.len() {
+            let transparency = if edges.contains(&i) { 0xFF } else { 0x55 };
+            self.set_edge_transparency(i, transparency);
+        }
     }
 
     fn set_node_transparency(&mut self, handle: usize, transparency: u8) {
@@ -432,7 +439,7 @@ impl Scene {
         }
     }
 
-    fn highlight_dependencies(&mut self, handle: usize) {
+    fn highlight_dependencies(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue = vec![handle];
         let mut edges = vec![];
@@ -449,19 +456,37 @@ impl Scene {
             }
         }
 
-        for edge_handle in edges.into_iter() {
-            web_print!(
-                "{} {}",
-                self.edges[edge_handle].from,
-                self.edges[edge_handle].to
-            );
-            self.set_edge_transparency(edge_handle, 0xFF);
+        (nodes, edges)
+    }
+
+    fn get_incoming_edges(&self, handle: usize) -> Vec<usize> {
+        let mut out: Vec<usize> = Vec::new();
+        for (i, edge) in self.edges.iter().enumerate() {
+            if edge.to == handle {
+                out.push(i);
+            }
         }
-        for node_handle in nodes.into_iter() {
-            web_print!("{:?}", self.model.nodes[node_handle]);
-            web_print!("{:?}", self.nodes[node_handle]);
-            web_print!("{:?}", node_handle);
-            self.set_node_transparency(node_handle, 0xFF);
+        out
+    }
+
+    fn highlight_dependents(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
+        let mut visited: HashSet<usize> = HashSet::new();
+        let mut queue = vec![handle];
+        let mut edges = vec![];
+        let mut nodes = vec![];
+
+        while let Some(h) = queue.pop() {
+            if !visited.insert(h) {
+                continue;
+            }
+            nodes.push(h);
+            let edge_handles = self.get_incoming_edges(h);
+            for edge_handle in edge_handles.iter() {
+                edges.push(*edge_handle);
+                queue.push(self.edges[*edge_handle].from);
+            }
         }
+
+        (nodes, edges)
     }
 }

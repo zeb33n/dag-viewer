@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{data_types::*, parser::parse, web_print};
 
 pub struct Model {
@@ -25,30 +27,25 @@ impl Model {
     }
 
     pub fn get_root_node(&self) -> NodeHandle {
-        web_print!("num nodes {}", self.nodes.len());
-        let mut roots: Vec<NodeHandle> = vec![];
-        for i in 0..self.nodes.len() {
-            let mut depended_on: bool = false;
-            for j in 0..self.nodes.len() {
-                if j == i {
-                    continue;
-                }
-                let node: &Node = &self.nodes[j];
-                for h_node in &node.dependents {
-                    if *h_node == i {
-                        depended_on = true;
-                        break;
-                    }
-                }
-                if depended_on {
-                    break;
-                }
+        let mut children = HashSet::new();
+        for node in self.nodes.iter() {
+            for h in node.dependents.iter() {
+                children.insert(h);
             }
-            if !depended_on {
+        }
+        let mut roots = Vec::new();
+        for i in 0..self.nodes.len() {
+            if !children.contains(&i) {
                 roots.push(i);
             }
         }
-        assert!(roots.len() == 1);
+        if roots.len() != 1 {
+            web_print!("too many root");
+            for root in roots.iter() {
+                web_print!("{:?}", self.nodes[*root]);
+            }
+            panic!()
+        }
         roots[0]
     }
 }

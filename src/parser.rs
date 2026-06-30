@@ -1,5 +1,5 @@
-use crate::Node;
-use std::collections::BTreeMap;
+use crate::{web_print, Node};
+use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug)]
 pub enum Token {
@@ -58,7 +58,8 @@ fn tokenise(src: &str) -> Result<Vec<Token>, String> {
                 }
                 Ok(Token::Word(word))
             }
-            b';' | _ if byte.is_ascii_whitespace() => continue,
+            b';' => continue,
+            _ if byte.is_ascii_whitespace() => continue,
             unexpected => Err(format!("Unexpected character {}", *unexpected as char)),
         }?;
         tokens.push(token)
@@ -69,7 +70,8 @@ fn tokenise(src: &str) -> Result<Vec<Token>, String> {
 pub fn parse(src: &str) -> Result<Vec<Node>, String> {
     let tokens = tokenise(src)?;
     let mut tokens_iter = tokens.iter().peekable();
-    let mut nodes: BTreeMap<&str, Node> = BTreeMap::new();
+    let mut nodes = Vec::new();
+    let mut seen: HashSet<&str> = HashSet::new();
     match tokens_iter
         .next()
         .ok_or("expected word token".to_string())?
@@ -86,7 +88,7 @@ pub fn parse(src: &str) -> Result<Vec<Node>, String> {
     loop {
         match tokens_iter.next().ok_or("expected token".to_string())? {
             Token::Word(word) => {
-                insert_and_get_index(&mut nodes, word);
+                let parent_handle = insert_and_get_index(&mut seen, &mut nodes, word);
                 match tokens_iter.peek() {
                     Some(Token::Arrow) => {
                         tokens_iter.next();
@@ -96,33 +98,43 @@ pub fn parse(src: &str) -> Result<Vec<Node>, String> {
                 let child_handle = if let Token::Word(w) =
                     tokens_iter.next().ok_or("expected token".to_string())?
                 {
-                    insert_and_get_index(&mut nodes, w)
+                    insert_and_get_index(&mut seen, &mut nodes, w)
                 } else {
                     return Err("Expected node name".to_string());
                 };
                 nodes
-                    .get_mut(word.as_str())
+                    .get_mut(parent_handle)
                     .unwrap()
                     .dependents
                     .push(child_handle);
             }
+            Token::OpenSquare => loop {
+                match tokens_iter.next() {
+                    Some(Token::CloseSquare) => break,
+                    None => return Err("expected ]".to_string()),
+                    _ => (),
+                }
+            },
             Token::CloseBrace => break,
             _ => return Err("Unexpected token".to_string()),
         }
     }
-    Ok(nodes.into_values().collect())
+    Ok(nodes)
 }
 
-fn insert_and_get_index<'a>(nodes: &mut BTreeMap<&'a str, Node>, word: &'a str) -> usize {
-    match nodes.get(word) {
-        Some(_) => (),
-        None => {
-            nodes.insert(word, Node::new(word));
-        }
-    };
+// this is bugged since the order is based on the key order not the order of insertion
+// we probably need to just use a hashset and a vec
+fn insert_and_get_index<'a>(
+    seen: &mut HashSet<&'a str>,
+    nodes: &mut Vec<Node>,
+    word: &'a str,
+) -> usize {
+    if seen.insert(word) {
+        nodes.push(Node::new(word));
+    }
     let mut i = 0;
-    for key in nodes.keys() {
-        if *key == word {
+    for node in nodes.iter() {
+        if node.label == word {
             break;
         }
         i += 1;

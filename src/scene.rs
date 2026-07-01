@@ -11,8 +11,6 @@ pub struct Camera {
 
 pub struct Scene {
     pub camera: Camera,
-    pub nodes: Vec<usize>,
-    pub edges: Vec<Path>,
     pub screen_w: f32,
     pub screen_h: f32,
     pub model: Model,
@@ -55,8 +53,6 @@ impl Scene {
                 },
                 zoom: 1.0,
             },
-            nodes: vec![],
-            edges: vec![],
             screen_w: screen_w as f32,
             screen_h: screen_h as f32,
             model: Model::from_source(src),
@@ -70,8 +66,6 @@ impl Scene {
                 pos: VecF2 { x: 0.0, y: 0.0 },
                 zoom: 1.0,
             },
-            nodes: vec![],
-            edges: vec![],
             screen_w: 0.0,
             screen_h: 0.0,
             model: Model::new_default(),
@@ -249,10 +243,10 @@ impl Scene {
         }
         for (i, j, path) in paths {
             let wrapper = &mut by_layer[i][j];
-            self.edges.push(path);
+            self.model.edges.push(path);
             self.model.nodes[wrapper.handle]
                 .edges
-                .push(self.edges.len() - 1);
+                .push(self.model.edges.len() - 1);
         }
     }
 
@@ -364,13 +358,6 @@ impl Scene {
         // the layout is now finalized, add drawable node connections
 
         self.add_drawable_connections(&mut by_layer);
-
-        self.nodes = by_layer
-            .into_iter()
-            .flatten()
-            .map(|x| x.handle)
-            //.filter(|x| !x.is_fake_node)
-            .collect();
     }
 
     pub fn world_to_screen(&self, coord: &VecF2) -> VecF2 {
@@ -412,13 +399,12 @@ impl Scene {
         nodes.extend(nodes_i.iter());
         edges.extend(edges_i.iter());
 
-        for i in 0..self.nodes.len() {
-            let h = &self.nodes[i];
-            let transparency = if nodes.contains(h) { 0xFF } else { 0x55 };
-            self.set_node_transparency(*h, transparency);
+        for i in 0..self.model.nodes.len() {
+            let transparency = if nodes.contains(&i) { 0xFF } else { 0x55 };
+            self.set_node_transparency(i, transparency);
         }
 
-        for i in 0..self.edges.len() {
+        for i in 0..self.model.edges.len() {
             let transparency = if edges.contains(&i) { 0xFF } else { 0x55 };
             self.set_edge_transparency(i, transparency);
         }
@@ -431,7 +417,7 @@ impl Scene {
     }
 
     fn set_edge_transparency(&mut self, handle: usize, transparency: u8) {
-        for line in self.edges[handle].line_segments.iter_mut() {
+        for line in self.model.edges[handle].line_segments.iter_mut() {
             let mut bytes = line.colour.to_be_bytes();
             bytes[3] = transparency;
             line.colour = u32::from_be_bytes(bytes);
@@ -451,7 +437,7 @@ impl Scene {
             nodes.push(h);
             for edge_handle in self.model.nodes[h].edges.iter() {
                 edges.push(*edge_handle);
-                queue.push(self.edges[*edge_handle].to);
+                queue.push(self.model.edges[*edge_handle].to);
             }
         }
 
@@ -460,7 +446,7 @@ impl Scene {
 
     fn get_incoming_edges(&self, handle: usize) -> Vec<usize> {
         let mut out: Vec<usize> = Vec::new();
-        for (i, edge) in self.edges.iter().enumerate() {
+        for (i, edge) in self.model.edges.iter().enumerate() {
             if edge.to == handle {
                 out.push(i);
             }
@@ -482,7 +468,7 @@ impl Scene {
             let edge_handles = self.get_incoming_edges(h);
             for edge_handle in edge_handles.iter() {
                 edges.push(*edge_handle);
-                queue.push(self.edges[*edge_handle].from);
+                queue.push(self.model.edges[*edge_handle].from);
             }
         }
 

@@ -2,14 +2,23 @@ mod drawing;
 mod js;
 use drawing::draw;
 use scene::*;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    LazyLock, Mutex,
+};
 mod data_types;
 use data_types::*;
 mod model;
 mod parser;
 mod scene;
 
-const DOT_FILE: &str = include_str!("../graph.dot");
+static GRAPHVIZ_LAYOUT: AtomicBool = AtomicBool::new(true);
+
+pub fn is_graphviz_layout() -> bool {
+    GRAPHVIZ_LAYOUT.load(Ordering::Relaxed)
+}
+
+const DOT_FILE: &str = include_str!("../file.dot");
 
 static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_default()));
 
@@ -19,7 +28,9 @@ pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
     let mut scene = SCENE.lock().unwrap();
     let mut s = Scene::new(w, h, DOT_FILE);
 
-    s.layout(); // comment this out to use the layout_test instead
+    if !is_graphviz_layout() {
+        s.layout(); // comment this out to use the layout_test instead
+    }
 
     *scene = s;
     draw(&*scene);
@@ -51,11 +62,10 @@ pub extern "C" fn dag_viewer_zoom(x: f32, y: f32, direction: bool) -> () {
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
     let mut scene = SCENE.lock().unwrap();
-    for (i, _) in scene.nodes.iter().enumerate() {
+    for (i, _) in scene.model.nodes.iter().enumerate() {
         if !scene.check_bound_circle(i, VecF2 { x: x, y: y }) {
             continue;
         }
-        web_print!("{}", i);
         scene.highlight_node(i);
         break;
     }

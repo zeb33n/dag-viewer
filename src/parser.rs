@@ -1,4 +1,7 @@
-use std::{iter::Peekable, slice::Iter};
+use std::{
+    iter::{Peekable, Skip},
+    slice::Iter,
+};
 
 use crate::{
     data_types::{Line, Path},
@@ -48,6 +51,7 @@ fn tokenise(src: &str) -> Result<Vec<Token>, String> {
                         .ok_or("Could Not Find Closing \"".to_string())?;
                     match next {
                         b'"' => break,
+                        b'\\' => handle_backslash(&mut bytes),
                         v => word.push(*v as char),
                     }
                 }
@@ -66,6 +70,7 @@ fn tokenise(src: &str) -> Result<Vec<Token>, String> {
                 }
                 Ok(tokenise_keywords(word))
             }
+            b'\\' => continue,
             b';' => continue,
             _ if byte.is_ascii_whitespace() => continue,
             unexpected => Err(format!("Unexpected character {}", *unexpected as char)),
@@ -73,6 +78,15 @@ fn tokenise(src: &str) -> Result<Vec<Token>, String> {
         tokens.push(token)
     }
     Ok(tokens)
+}
+
+fn handle_backslash<'a>(bytes: &mut Peekable<Iter<'a, u8>>) {
+    match bytes.peek() {
+        Some(byte) if **byte == b'\n' => {
+            bytes.next();
+        }
+        _ => return,
+    }
 }
 
 fn tokenise_keywords(word: String) -> Token {
@@ -116,8 +130,9 @@ pub fn parse(src: &str) -> Result<(Vec<Node>, Vec<Path>), String> {
                     _ => (),
                 }
             },
+            Token::Node | Token::Graph => continue,
             Token::CloseBrace => break,
-            _ => return Err("Unexpected token".to_string()),
+            unexpected => return Err(format!("Unexpected token {:?}", unexpected)),
         }
     }
     Ok((nodes, paths))
@@ -165,15 +180,18 @@ fn parse_edge(
     if pos_vec.len() == 0 {
         return Err("expected pos attributte".to_string());
     }
-    for w in pos_vec.windows(2) {
+    // skip the first pair since this is start to end coords for whole path
+    for w in pos_vec.windows(2).skip(1) {
         path.line_segments
-            .push(Line::new(w[0].to_owned(), w[1].to_owned()))
+            .push(Line::new(w[0].to_owned(), w[1].to_owned()));
     }
     paths.push(path);
+    nodes[parent_handle].edges.push(paths.len() - 1);
 
     Ok(())
 }
 
+// TODO rework to parse attributes properly instead of just pos
 fn parse_attributes(tokens_iter: &mut Peekable<Iter<Token>>) -> Result<Vec<VecF2>, String> {
     match tokens_iter.peek() {
         Some(Token::OpenSquare) => {

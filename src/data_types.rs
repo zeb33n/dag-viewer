@@ -2,11 +2,6 @@ use std::ops::{self, AddAssign, SubAssign};
 // rgba
 pub type Colour = u32;
 
-pub trait Connector {
-    fn set_colour(&mut self, colour: Colour);
-    fn draw(&self);
-}
-
 #[derive(Clone)]
 pub struct Line {
     pub a: VecF2,
@@ -19,26 +14,6 @@ impl Line {
         Self {
             a,
             b,
-            colour: 0x00000055,
-        }
-    }
-}
-
-pub struct Curve {
-    pub a: VecF2,
-    pub b: VecF2,
-    pub c: VecF2,
-    pub d: VecF2,
-    pub colour: Colour,
-}
-
-impl Curve {
-    pub fn new(a: VecF2, b: VecF2, c: VecF2, d: VecF2) -> Self {
-        Self {
-            a,
-            b,
-            c,
-            d,
             colour: 0x00000055,
         }
     }

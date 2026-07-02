@@ -19,6 +19,6 @@ pub fn draw(scene: &Scene) -> () {
         let radius = 30.0 * scene.camera.zoom;
         js::fill_circ(p.x, p.y, radius, node.colour);
         let text: &str = &node.label;
-        js::fill_string(p.x + radius, p.y, text, 0x000000FF, 10.0);
+        js::fill_string(p.x + radius, p.y, text, 0xFF00FF55, 10.0);
     }
 }

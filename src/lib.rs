@@ -18,7 +18,7 @@ pub fn is_graphviz_layout() -> bool {
     GRAPHVIZ_LAYOUT.load(Ordering::Relaxed)
 }
 
-const DOT_FILE: &str = include_str!("../file.dot");
+const DOT_FILE: &str = include_str!("../graph.dot");
 
 static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_default()));
 

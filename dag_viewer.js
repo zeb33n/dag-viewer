@@ -53,7 +53,7 @@ function canvas_coords(e) {
     };
 }
 
-const wasm_path = new URL('target/wasm32-unknown-unknown/release/dag_viewer.wasm', import.meta.url);
+const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
 
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
     dag_viewer_js: {

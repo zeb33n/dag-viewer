@@ -38,13 +38,13 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(label: String) -> Self {
+    pub fn new(label: &str) -> Self {
         Self {
             is_fake_node: false,
             position: VecF2 { x: 0.0, y: 0.0 },
             colour: 0xFF000055,
             edges: vec![],
-            label: label,
+            label: label.to_string(),
             dependents: vec![],
         }
     }

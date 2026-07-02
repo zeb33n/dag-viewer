@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use crate::{data_types::*, model::*};
 
 use crate::web_print;
-use dot_parser::ast::{Graph, ID};
 
 pub struct Camera {
     pub pos: VecF2,
@@ -47,7 +46,7 @@ struct LayoutNodeWrapper {
 }
 
 impl Scene {
-    pub fn new(screen_w: i32, screen_h: i32, graph: &Graph<(ID<'_>, ID<'_>)>) -> Self {
+    pub fn new(screen_w: i32, screen_h: i32, src: &str) -> Self {
         Self {
             camera: Camera {
                 pos: VecF2 {
@@ -60,7 +59,7 @@ impl Scene {
             edges: vec![],
             screen_w: screen_w as f32,
             screen_h: screen_h as f32,
-            model: Model::new(graph),
+            model: Model::from_source(src),
             // TODO calculate this properly
         }
     }

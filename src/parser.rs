@@ -135,6 +135,9 @@ pub fn parse(src: &str) -> Result<(Vec<Node>, Vec<Path>), String> {
             unexpected => return Err(format!("Unexpected token {:?}", unexpected)),
         }
     }
+    if is_graphviz_layout() {
+        adjust_edge_coordinates(&mut nodes, &mut paths);
+    }
     Ok((nodes, paths))
 }
 
@@ -181,6 +184,7 @@ fn parse_edge(
         return Err("expected pos attributte".to_string());
     }
     // skip the first pair since this is start to end coords for whole path
+    // TODO find colinear segments and combine them to reduce N line segments
     for w in pos_vec.windows(2).skip(1) {
         path.line_segments
             .push(Line::new(w[0].to_owned(), w[1].to_owned()));
@@ -234,4 +238,15 @@ fn insert_and_get_index(nodes: &mut Vec<Node>, word: &str) -> usize {
     }
     nodes.push(Node::new(word));
     nodes.len() - 1
+}
+
+fn adjust_edge_coordinates(nodes: &Vec<Node>, edges: &mut Vec<Path>) {
+    for node in nodes.iter() {
+        for edge_handle in node.edges.iter() {
+            let edge = edges.get_mut(*edge_handle).unwrap();
+            edge.line_segments.first_mut().unwrap().a = node.position.to_owned();
+            let child = &nodes[edge.to];
+            edge.line_segments.last_mut().unwrap().b = child.position.to_owned();
+        }
+    }
 }

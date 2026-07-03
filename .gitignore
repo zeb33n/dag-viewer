@@ -1,6 +1,7 @@
 /target
-docs/assets/dag_viewer.wasm
-docs/assets/dag_viewer.js
+docs/dag_viewer_assets/*
+dag_viewer/assets/*.wasm
+dag_viewer_assets
 dag_viewer.wasm
 **/__pycache__
 site

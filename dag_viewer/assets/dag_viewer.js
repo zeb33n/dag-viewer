@@ -111,3 +111,5 @@ export function dag_viewer_init() {
         w.instance.exports.dag_viewer_click(coords.x, coords.y);
     })
 }
+
+dag_viewer_init()

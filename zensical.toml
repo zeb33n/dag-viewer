@@ -318,8 +318,6 @@ toggle.name = "Switch to light mode"
 [project.markdown_extensions.def_list]
 [project.markdown_extensions.footnotes]
 [project.markdown_extensions.md_in_html]
-[project.markdown_extensions.zensical.extensions.macros]
-module_name = "dag_viewer"
 [project.markdown_extensions.toc]
 permalink = true
 [project.markdown_extensions.pymdownx.arithmatex]
@@ -349,3 +347,8 @@ combine_header_slug = true
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 [project.markdown_extensions.pymdownx.tilde]
+
+# dag viewer stuff
+[project.markdown_extensions.zensical.extensions.macros]
+include_dir = "dag_viewer_assets"
+module_name = "dag_viewer"

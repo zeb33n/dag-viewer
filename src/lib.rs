@@ -25,6 +25,8 @@ static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_de
 #[unsafe(no_mangle)]
 // force the compiler to use C ABI so WebAssemply module interface is stable
 pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
+    web_print!("hello from rust zeboob");
+    js::fill_rect(0.0, 0.0, 50.0, 50.0, 0xFF00FFFF);
     let mut scene = SCENE.lock().unwrap();
     let mut s = Scene::new(w, h, DOT_FILE);
 

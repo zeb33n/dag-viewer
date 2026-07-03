@@ -5,7 +5,7 @@ icon: lucide/rocket
 # Get started
 
 For full documentation visit [zensical.org](https://zensical.org/docs/).
-{{ dag_viewer(1, 2) }}
+{{ dag_viewer("600px", "600px") }}
 ## Commands
 
 * [`zensical new`][new] - Create a new project

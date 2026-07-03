@@ -3,6 +3,7 @@
 let app = document.getElementById("dag_viewer");
 let ctx = app.getContext("2d");
 let w = null;
+let d = null;
 let text = "";
 let mouse_is_down = false;
 let mouse_click_pos = { x: 0, y: 0};
@@ -53,13 +54,16 @@ function canvas_coords(e) {
     };
 }
 
-const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
 
+const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
+const dot_path = new URL("graph.dot", import.meta.url);
+
+d = new Uint8Array(await (await fetch(dot_path)).arrayBuffer());
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
     dag_viewer_js: {
         js_fill_rect,
         js_fill_line,
-        js_fill_circ, 
+        js_fill_circ,
         js_log: (ptr, len) => {
             const bytes = new Uint8Array(w.instance.exports.memory.buffer, ptr, len);
             const str = new TextDecoder().decode(bytes);
@@ -71,6 +75,11 @@ w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
 })
 
 export function dag_viewer_init() {
+    const ptr = w.instance.exports.dag_viewer_alloc(d.length);
+    const memory = new Uint8Array(w.instance.exports.memory.buffer);
+    memory.set(d, ptr);
+    w.instance.exports.dag_viewer_load_dotfile(ptr, d.length);
+    
     w.instance.exports.dag_viewer_init(app.width, app.height);
 
     app.addEventListener("mousedown", (e) => {

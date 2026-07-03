@@ -18,17 +18,16 @@ pub fn is_graphviz_layout() -> bool {
     GRAPHVIZ_LAYOUT.load(Ordering::Relaxed)
 }
 
-const DOT_FILE: &str = include_str!("../graph.dot");
+static mut DOT_FILE: Option<&str> = None;
 
 static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_default()));
 
 #[unsafe(no_mangle)]
 // force the compiler to use C ABI so WebAssemply module interface is stable
 pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
-    web_print!("hello from rust zeboob");
-    js::fill_rect(0.0, 0.0, 50.0, 50.0, 0xFF00FFFF);
     let mut scene = SCENE.lock().unwrap();
-    let mut s = Scene::new(w, h, DOT_FILE);
+    let dot = unsafe { DOT_FILE.expect("balh") };
+    let mut s = Scene::new(w, h, dot);
 
     if !is_graphviz_layout() {
         s.layout(); // comment this out to use the layout_test instead
@@ -72,4 +71,18 @@ pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
         break;
     }
     draw(&*scene);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_load_dotfile(ptr: *const u8, len: usize) {
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(ptr, len) };
+    unsafe { DOT_FILE = Some(std::str::from_utf8(bytes).unwrap()) };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_alloc(len: usize) -> *mut u8 {
+    let mut buf = Vec::<u8>::with_capacity(len);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
 }

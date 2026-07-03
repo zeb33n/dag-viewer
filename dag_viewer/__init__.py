@@ -19,5 +19,5 @@ def define_env(env):
     def dag_viewer(w, h):
         return f"""
 <script type="module" src="dag_viewer_assets/dag_viewer.js"></script>
-<canvas id="dag_viewer" tabindex="1" height="{h}" width="{w}"></canvas>
+<canvas id="dag_viewer" height="{h}" width="{w}"></canvas>
 """

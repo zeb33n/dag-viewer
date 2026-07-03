@@ -98,13 +98,14 @@ export function dag_viewer_init() {
         mouse_click_pos = {x: coords.x, y: coords.y};
 
         w.instance.exports.dag_viewer_drag(dx, dy);
-    });
+    } );
 
     app.addEventListener("wheel", (e) => {
+        e.preventDefault()
         const coords = canvas_coords(e);
         const direction = e.deltaY < 0;
         w.instance.exports.dag_viewer_zoom(coords.x, coords.y, direction);
-    });
+    }, { passive: false });
 
     app.addEventListener("click", (e) => {
         const coords = canvas_coords(e);

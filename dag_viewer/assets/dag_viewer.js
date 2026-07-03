@@ -56,7 +56,7 @@ function canvas_coords(e) {
 
 
 const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
-const dot_path = new URL("graph.dot", import.meta.url);
+const dot_path = new URL("processed_graph.dot", import.meta.url);
 
 d = new Uint8Array(await (await fetch(dot_path)).arrayBuffer());
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {

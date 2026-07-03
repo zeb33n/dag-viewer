@@ -1,12 +1,10 @@
 /target
-docs/dag_viewer_assets/*
 dag_viewer/assets/*.wasm
-dag_viewer_assets
 dag_viewer.wasm
 **/__pycache__
+graph.dot
 site
 build
-graph.dot
 graph.svg
 .venv
 uv.lock

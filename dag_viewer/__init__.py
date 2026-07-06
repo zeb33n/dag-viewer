@@ -1,21 +1,18 @@
 from pathlib import Path
 import shutil
 import subprocess
+import yaml
 
-ASSET_DIR = "docs/dag_viewer_assets"
+# parse config
+CONFIG_FILE = "dag-viewer.yml"
+
+config = yaml.safe_load(Path(CONFIG_FILE).open())
+
+DOCS_DIR = config.get("docs-dir", "docs")
+ASSET_DIR = f"{DOCS_DIR}/dag_viewer_assets"
+DOT_FILES = config.get("dot-files", [f"{DOCS_DIR}/graph.dot"])
 JS_FILE = "dag_viewer.js"
 WASM_FILE = "dag_viewer.wasm"
-DOT_FILE = "graph.dot"
-PROCESSED_DOT_FILE = f"processed_{DOT_FILE}"
-
-# use graphvis to process the dotfile
-dotsrc = subprocess.run(
-    ["dot", "-Tdot", "-Gsplines=polyline", "-Grankdir=LR", f"{ASSET_DIR}/{DOT_FILE}"],
-    check=True,
-    capture_output=True,
-).stdout
-
-(Path(ASSET_DIR) / PROCESSED_DOT_FILE).write_bytes(dotsrc)
 
 # copy required package files to ASSET_DIR
 for file in [JS_FILE, WASM_FILE]:
@@ -24,19 +21,30 @@ for file in [JS_FILE, WASM_FILE]:
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(str(out), dst)
 
+# use graphvis to process the dotfiles
+for f in DOT_FILES:
+    dotsrc = subprocess.run(
+        ["dot", "-Tdot", "-Gsplines=polyline", "-Grankdir=LR", f],
+        check=True,
+        capture_output=True,
+    ).stdout
+
+    pf = f"processed_{Path(f).name}"
+    (Path(ASSET_DIR) / pf).write_bytes(dotsrc)
+
+
 # write a .gitignore so user doesnt accidentally commit our generated files
-(Path(ASSET_DIR) / ".gitignore").write_text(f"""
-{JS_FILE}
-{WASM_FILE}
-{PROCESSED_DOT_FILE}
-""")
+(Path(ASSET_DIR) / ".gitignore").write_text("*")
 
 
 def define_env(env):
 
     @env.macro
-    def dag_viewer(w, h):
+    def dag_viewer(w, h, graph):
         return f"""
-<script type="module" src="dag_viewer_assets/dag_viewer.js"></script>
+<script type="module">
+  import {{dag_viewer_init}} from "/dag_viewer_assets/dag_viewer.js"
+  dag_viewer_init("/dag_viewer_assets/processed_{graph}");
+</script>
 <canvas id="dag_viewer" height="{h}" width="{w}"></canvas>
 """

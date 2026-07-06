@@ -3,7 +3,6 @@
 let app = document.getElementById("dag_viewer");
 let ctx = app.getContext("2d");
 let w = null;
-let d = null;
 let text = "";
 let mouse_is_down = false;
 let mouse_click_pos = { x: 0, y: 0};
@@ -45,6 +44,12 @@ function js_fill_string(x, y, pString, stringLen, colour, size) {
     ctx.fillText(str, x, y); 
 }
 
+function js_log(ptr, len) {
+    const bytes = new Uint8Array(w.instance.exports.memory.buffer, ptr, len);
+    const str = new TextDecoder().decode(bytes);
+    console.log(str);
+}
+
 function canvas_coords(e) {
     const bounding_box = app.getBoundingClientRect();
 
@@ -56,31 +61,27 @@ function canvas_coords(e) {
 
 
 const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
-const dot_path = new URL("processed_graph.dot", import.meta.url);
-
-d = new Uint8Array(await (await fetch(dot_path)).arrayBuffer());
 w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
     dag_viewer_js: {
         js_fill_rect,
         js_fill_line,
         js_fill_circ,
-        js_log: (ptr, len) => {
-            const bytes = new Uint8Array(w.instance.exports.memory.buffer, ptr, len);
-            const str = new TextDecoder().decode(bytes);
-            console.log(str);
-        },
-
+        js_log,
         js_fill_string,
     }
 })
 
-export function dag_viewer_init() {
+export async function dag_viewer_init(dotfile) {
+    // load the dot file into wasm memory
+    const dot_path = new URL(dotfile, import.meta.url);
+    console.log(dot_path);
+    const d = await new Uint8Array(await (await fetch(dot_path)).arrayBuffer());
     const ptr = w.instance.exports.dag_viewer_alloc(d.length);
     const memory = new Uint8Array(w.instance.exports.memory.buffer);
     memory.set(d, ptr);
-    w.instance.exports.dag_viewer_load_dotfile(ptr, d.length);
-    
-    w.instance.exports.dag_viewer_init(app.width, app.height);
+
+    // start the app
+    w.instance.exports.dag_viewer_init(app.width, app.height, ptr, d.length);
 
     app.addEventListener("mousedown", (e) => {
         const coords = canvas_coords(e);
@@ -122,4 +123,3 @@ export function dag_viewer_init() {
     })
 }
 
-dag_viewer_init()

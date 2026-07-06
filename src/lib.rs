@@ -18,15 +18,14 @@ pub fn is_graphviz_layout() -> bool {
     GRAPHVIZ_LAYOUT.load(Ordering::Relaxed)
 }
 
-static mut DOT_FILE: Option<&str> = None;
-
 static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_default()));
 
 #[unsafe(no_mangle)]
 // force the compiler to use C ABI so WebAssemply module interface is stable
-pub extern "C" fn dag_viewer_init(w: i32, h: i32) -> () {
+pub extern "C" fn dag_viewer_init(w: i32, h: i32, ptr: *const u8, len: usize) -> () {
+    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(ptr, len) };
+    let dot = std::str::from_utf8(bytes).unwrap();
     let mut scene = SCENE.lock().unwrap();
-    let dot = unsafe { DOT_FILE.expect("balh") };
     let mut s = Scene::new(w, h, dot);
 
     if !is_graphviz_layout() {
@@ -71,12 +70,6 @@ pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
         break;
     }
     draw(&*scene);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn dag_viewer_load_dotfile(ptr: *const u8, len: usize) {
-    let bytes: &[u8] = unsafe { std::slice::from_raw_parts(ptr, len) };
-    unsafe { DOT_FILE = Some(std::str::from_utf8(bytes).unwrap()) };
 }
 
 #[unsafe(no_mangle)]

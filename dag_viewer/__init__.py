@@ -19,10 +19,14 @@ for file in [JS_FILE, WASM_FILE]:
     dst = Path(ASSET_DIR).joinpath(file)
     out = Path(__file__).parent.joinpath(f"assets/{file}")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(str(out), dst)
+    shutil.copy2(out, dst)
 
 # use graphvis to process the dotfiles
 for f in DOT_FILES:
+    if not Path(f).exists():
+        print(f"Warning: cant find file {f}")
+        continue
+
     dotsrc = subprocess.run(
         ["dot", "-Tdot", "-Gsplines=polyline", "-Grankdir=LR", f],
         check=True,
@@ -38,13 +42,16 @@ for f in DOT_FILES:
 
 
 def define_env(env):
+    # Counter
+    viewer_count = [0]
 
     @env.macro
     def dag_viewer(w, h, graph):
+        viewer_count[0] += 1
         return f"""
 <script type="module">
   import {{dag_viewer_init}} from "/dag_viewer_assets/dag_viewer.js"
-  dag_viewer_init("/dag_viewer_assets/processed_{graph}");
+  dag_viewer_init("/dag_viewer_assets/processed_{graph}", "dag_viewer_{viewer_count[0]}");
 </script>
-<canvas id="dag_viewer" height="{h}" width="{w}"></canvas>
+<canvas id="dag_viewer_{viewer_count[0]}" height="{h}" width="{w}"></canvas>
 """

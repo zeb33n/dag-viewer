@@ -29,7 +29,7 @@ pub extern "C" fn dag_viewer_init(w: i32, h: i32, ptr: *const u8, len: usize) ->
     let mut s = Scene::new(w, h, dot);
 
     if !is_graphviz_layout() {
-        s.layout(); // comment this out to use the layout_test instead
+        s.layout();
     }
 
     *scene = s;

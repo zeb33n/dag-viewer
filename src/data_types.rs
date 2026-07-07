@@ -9,6 +9,16 @@ pub struct Line {
     pub colour: Colour,
 }
 
+impl Line {
+    pub fn new(a: VecF2, b: VecF2) -> Self {
+        Self {
+            a,
+            b,
+            colour: 0x00000055,
+        }
+    }
+}
+
 #[derive(Clone)]
 
 pub struct Path {

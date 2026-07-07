@@ -4,6 +4,7 @@ use crate::{data_types::*, parser::parse, web_print};
 
 pub struct Model {
     pub nodes: Vec<Node>,
+    pub edges: Vec<Path>,
 }
 
 pub fn decode_url_encoded_string(encoded_str: &str) -> String {
@@ -12,13 +13,22 @@ pub fn decode_url_encoded_string(encoded_str: &str) -> String {
 
 impl Model {
     pub fn new_default() -> Self {
-        Self { nodes: vec![] }
+        Self {
+            nodes: vec![],
+            edges: vec![],
+        }
     }
 
     pub fn from_source(src: &str) -> Self {
         match parse(src) {
-            Ok(ns) => Self { nodes: ns },
-            Err(s) => panic!("{}", s),
+            Ok((ns, ps)) => Self {
+                nodes: ns,
+                edges: ps,
+            },
+            Err(s) => {
+                web_print!("{}", s);
+                panic!("{}", s);
+            }
         }
     }
 

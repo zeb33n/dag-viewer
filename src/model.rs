@@ -7,10 +7,6 @@ pub struct Model {
     pub edges: Vec<Path>,
 }
 
-pub fn decode_url_encoded_string(encoded_str: &str) -> String {
-    encoded_str.replace("%3A", ":").replace("%2F", "/")
-}
-
 impl Model {
     pub fn new_default() -> Self {
         Self {

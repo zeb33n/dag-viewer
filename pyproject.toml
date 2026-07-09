@@ -10,8 +10,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["dag_viewer"]
-packages = ["dag_viewer"]
+packages = ["dag_viewer", "dag_viewer.assets"]
 
 [tool.setuptools.package-data]
 dag_viewer = [

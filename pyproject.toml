@@ -8,6 +8,8 @@ version = "0.1.0"
 dependencies = [
     "zensical>=0.0.46",
 ]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
 
 [tool.setuptools]
 packages = ["dag_viewer", "dag_viewer.assets"]

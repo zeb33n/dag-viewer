@@ -1,0 +1,63 @@
+name: Build and Publish to PyPI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-publish:
+    strategy:
+        matrix:
+            python-version: ["3.11", "3.12", "3.13", "3.14"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Set up Python
+        run: |
+          uv python install ${{ matrix.python-version }}
+          uv venv
+
+      - name: build
+        run: make build
+
+      - name: Install Graphviz System Package
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      - name: test
+        run: make site
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - uses: actions/configure-pages@v6
+        if: github.event_name == 'release' && matrix.python-version == '3.14'
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name == 'release' && matrix.python-version == '3.14'
+        with:
+          path: site
+      - uses: actions/deploy-pages@v5
+        if: github.event_name == 'release' && matrix.python-version == '3.14'
+        id: deployment

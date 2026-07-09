@@ -4,7 +4,7 @@ rust:
 	cargo build --release --target=wasm32-unknown-unknown
 	cp target/wasm32-unknown-unknown/release/dag_viewer.wasm dag_viewer/assets/dag_viewer.wasm
 
-python:
+python: rust
 	pip install .
 
 site: python

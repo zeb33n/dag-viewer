@@ -37,14 +37,16 @@ jobs:
           uv python install ${{ matrix.python-version }}
           uv venv
 
-      - name: build
-        run: make build
+      - name: build and install
+        run: make install
 
       - name: Install Graphviz System Package
         run: sudo apt-get update && sudo apt-get install -y graphviz
 
       - name: test
-        run: make site
+        env:
+          DAG_VIEWER_COPY_TO_SITE: true
+        run: uv run zensical build --clean
 
       - name: Publish to PyPI
         if: github.event_name == 'release' && matrix.python-version == '3.14'

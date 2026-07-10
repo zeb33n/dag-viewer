@@ -1,44 +1,53 @@
 from pathlib import Path
 import shutil
 import subprocess
+from typing import Any
 import yaml
+import os
+import atexit
 
-# parse config
 CONFIG_FILE = "dag-viewer.yml"
 
 config = yaml.safe_load(Path(CONFIG_FILE).open())
 
-DOCS_DIR = config.get("docs-dir", "docs")
-ASSET_DIR = f"{DOCS_DIR}/dag_viewer_assets"
-DOT_FILES = config.get("dot-files", [f"{DOCS_DIR}/graph.dot"])
+
+def get_config_value(key: str) -> Any | None:
+    return os.environ.get(
+        f"DAG_VIEWER_{key.upper().replace('-', '_')}", config.get(key)
+    )
+
+
+DOCS_DIR = get_config_value("docs-dir") or "docs"
+SITE_DIR = get_config_value("site-dir") or "site"
+DOT_FILES = get_config_value("dot-files") or [f"{DOCS_DIR}/graph.dot"]
+ASSET_DIR = f"{SITE_DIR}/dag_viewer_assets"
 JS_FILE = "dag_viewer.js"
 WASM_FILE = "dag_viewer.wasm"
 
-# copy required package files to ASSET_DIR
-for file in [JS_FILE, WASM_FILE]:
-    dst = Path(ASSET_DIR).joinpath(file)
-    out = Path(__file__).parent.joinpath(f"assets/{file}")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(out, dst)
 
-# use graphvis to process the dotfiles
-for f in DOT_FILES:
-    if not Path(f).exists():
-        print(f"Warning: cant find file {f}")
-        continue
+def copy_assets():
+    # copy required package files to ASSET_DIR
+    for file in [JS_FILE, WASM_FILE]:
+        dst = Path(ASSET_DIR).joinpath(file)
+        out = Path(__file__).parent.joinpath(f"assets/{file}")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        print(f"DAG VIEWER: copying {out} to {dst}", flush=True)
+        shutil.copy2(out, dst)
 
-    dotsrc = subprocess.run(
-        ["dot", "-Tdot", "-Gsplines=polyline", "-Grankdir=LR", f],
-        check=True,
-        capture_output=True,
-    ).stdout
+    # use graphvis to process the dotfiles
+    for f in DOT_FILES:
+        if not Path(f).exists():
+            print(f"Warning: cant find file {f}")
+            continue
 
-    pf = f"processed_{Path(f).name}"
-    (Path(ASSET_DIR) / pf).write_bytes(dotsrc)
+        dotsrc = subprocess.run(
+            ["dot", "-Tdot", "-Gsplines=polyline", "-Grankdir=LR", f],
+            check=True,
+            capture_output=True,
+        ).stdout
 
-
-# write a .gitignore so user doesnt accidentally commit our generated files
-(Path(ASSET_DIR) / ".gitignore").write_text("*")
+        pf = f"processed_{Path(f).name}"
+        (Path(ASSET_DIR) / pf).write_bytes(dotsrc)
 
 
 def define_env(env):
@@ -50,8 +59,13 @@ def define_env(env):
         viewer_count[0] += 1
         return f"""
 <script type="module">
-  import {{dag_viewer_init}} from "/dag_viewer_assets/dag_viewer.js"
-  dag_viewer_init("/dag_viewer_assets/processed_{graph}", "dag_viewer_{viewer_count[0]}");
+  const base = new URL(".", window.location.href);
+  const module = await import(`${{base}}/dag_viewer_assets/dag_viewer.js`);
+  const {{ dag_viewer_init}} = module;
+  dag_viewer_init(`${{base}}/dag_viewer_assets/processed_{graph}`, "dag_viewer_{viewer_count[0]}");
 </script>
 <canvas id="dag_viewer_{viewer_count[0]}" height="{h}" width="{w}"></canvas>
 """
+
+
+atexit.register(copy_assets)

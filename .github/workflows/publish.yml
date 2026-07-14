@@ -55,11 +55,11 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
       - uses: actions/configure-pages@v6
-        if: github.ref == 'main' && matrix.python-version == '3.14'
+        if: github.ref == 'refs/heads/main' && matrix.python-version == '3.14'
       - uses: actions/upload-pages-artifact@v5
-        if: github.ref == 'main' && matrix.python-version == '3.14'
+        if: github.ref == 'refs/heads/main' && matrix.python-version == '3.14'
         with:
           path: site
       - uses: actions/deploy-pages@v5
-        if: github.ref == 'main' && matrix.python-version == '3.14'
+        if: github.ref == 'refs/heads/main' && matrix.python-version == '3.14'
         id: deployment

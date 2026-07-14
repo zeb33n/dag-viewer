@@ -350,5 +350,4 @@ custom_checkbox = true
 
 # dag viewer stuff
 [project.markdown_extensions.zensical.extensions.macros]
-include_dir = "dag_viewer_assets"
 module_name = "dag_viewer"

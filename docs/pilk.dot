@@ -1,0 +1,60 @@
+digraph {
+    "Strawberry Jam";
+    "BBQ Sauce";
+    "Pepsi";
+    "Milk";
+    "Sprite";
+    "NyQuil";
+    "Ramen";
+    "Gas";
+    "Oreos";
+    "Pineapple Juice";
+    "Coke";
+    "Frosting";
+    "Lemonade";
+    "Lighter Fluid";
+    "Apple Juice";
+    "Strawbeque";
+    "Pilk";
+    "Lean";
+    "Gamen";
+    "Wareos";
+    "Poke";
+    "Fremonade";
+    "Flame Juice";
+    "Strawberry Jam" -> "Strawbeque";
+    "BBQ Sauce"      -> "Strawbeque";
+    "Pepsi" -> "Pilk";
+    "Milk"  -> "Pilk";
+    "Sprite" -> "Lean";
+    "NyQuil" -> "Lean";
+    "Gas" -> "Gamen"
+    "Ramen" -> "Gamen";
+    "Water" -> "Wareos";
+    "Oreos" -> "Wareos";
+    "Pineapple Juice" -> "Poke";
+    "Coke" -> "Poke";
+    "Frosting" -> "Fremonade";
+    "Lemonade" -> "Fremonade";
+    "Lighter Fluid" -> "Flame Juice";
+    "Apple Juice"   -> "Flame Juice";
+    "Strawbequilk";
+    "True Beverage of the Gods";
+    "Woke";
+    "Flemon Juice";
+    "The Apex";
+    "Strawbeque" -> "Strawbequilk";
+    "Pilk"       -> "Strawbequilk";
+    "Strawbequilk" -> "Beverage of the Gods";
+    "Leagamen" -> "Beverage of the Gods"
+    "Lean" -> "Leagamen";
+    "Gamen"    -> "Leagamen";
+    "Wareos" -> "Woke";
+    "Poke"   -> "Woke";
+    "Fremonade" -> "Flemon Juice";
+    "Flame Juice" -> "Flemon Juice";
+    "Woke" -> "The Apex";
+    "Flemon Juice" -> "The Apex";
+    "The Apex" -> "True Beverage of the Gods"
+    "Beverage of the Gods" -> "True Beverage of the Gods"
+}

@@ -17,9 +17,8 @@ def get_config_value(key: str) -> Any | None:
     )
 
 
-DOCS_DIR = get_config_value("docs-dir") or "docs"
 SITE_DIR = get_config_value("site-dir") or "site"
-DOT_FILES = get_config_value("dot-files") or [f"{DOCS_DIR}/graph.dot"]
+DOT_FILES = get_config_value("dot-files") or ["graph.dot"]
 ASSET_DIR = f"{SITE_DIR}/dag_viewer_assets"
 JS_FILE = "dag_viewer.js"
 WASM_FILE = "dag_viewer.wasm"

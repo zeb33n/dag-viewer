@@ -1,10 +1,11 @@
----
-icon: lucide/rocket
----
-
 # Dag Viewer
 
+An interactive graph viewer for the `.dot` format.
 
-## pilk
-{{ dag_viewer("900px", "900px", "pilk.dot") }}
+## Example
 
+An example based on [this meme](https://quad.pe/e/u7ye4Kh5Oi.jpg).
+
+{{ dag_viewer("900px", "450px", "pilk.dot") }}
+
+ 

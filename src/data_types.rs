@@ -2,6 +2,18 @@ use std::ops::{self, AddAssign, SubAssign};
 // rgba
 pub type Colour = u32;
 
+pub trait ColourExt {
+    fn set_transparency(&mut self, transparency: u8);
+}
+
+impl ColourExt for Colour {
+    fn set_transparency(&mut self, transparency: u8) {
+        let mut bytes = self.to_be_bytes();
+        bytes[3] = transparency;
+        *self = u32::from_be_bytes(bytes);
+    }
+}
+
 #[derive(Clone)]
 pub struct Line {
     pub a: VecF2,
@@ -41,10 +53,14 @@ impl Path {
 pub struct Node {
     pub is_fake_node: bool,
     pub position: VecF2,
+    pub radius: f32,
     pub colour: Colour,
-    pub edges: Vec<usize>,
     pub label: String,
+    pub label_size: f32,
+    pub label_colour: Colour,
+    pub edges: Vec<usize>,
     pub dependents: Vec<usize>,
+    pub bicone: bool,
 }
 
 impl Node {
@@ -52,10 +68,14 @@ impl Node {
         Self {
             is_fake_node: false,
             position: VecF2 { x: 0.0, y: 0.0 },
+            radius: 30.0,
             colour: 0xFF000055,
+            label_colour: 0x00000055,
+            label_size: 10.0,
             edges: vec![],
             label: label.to_string(),
             dependents: vec![],
+            bicone: false,
         }
     }
 
@@ -63,10 +83,14 @@ impl Node {
         Self {
             is_fake_node: true,
             position: VecF2 { x: 0.0, y: 0.0 },
+            radius: 30.0,
             colour: 0x00000000,
+            label_colour: 0x00000000,
+            label_size: 0.0,
             edges: vec![],
             label: "".to_string(),
             dependents: vec![],
+            bicone: false,
         }
     }
 }

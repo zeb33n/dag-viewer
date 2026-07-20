@@ -381,7 +381,7 @@ impl Scene {
                 x: node.position.x,
                 y: node.position.y,
             }),
-            radius: 30.0 * self.camera.zoom,
+            radius: node.radius * self.camera.zoom,
         }
     }
 
@@ -393,14 +393,37 @@ impl Scene {
         dx * dx + dy * dy <= circ.radius * circ.radius
     }
 
-    pub fn highlight_node(&mut self, handle: usize) {
-        let (mut nodes, mut edges) = self.highlight_dependencies(handle);
-        let (nodes_i, edges_i) = self.highlight_dependents(handle);
+    // TODO some concept of is node highlighted already or not
+    // so we dont overwrite highlight_bicone
+    pub fn highlight_node(&mut self, handle: Option<usize>) {
+        for i in 0..self.model.nodes.len() {
+            let (transparency, radius, label_size, label_transparency) = match handle {
+                Some(h) if h == i => (0xFF, 40.0, 20.0, 0xFF),
+                _ if self.model.nodes[i].bicone => (0xFF, 30.0, 10.0, 0x55),
+                _ => (0x55, 30.0, 10.0, 0x55),
+            };
+            self.set_node_label_transparency(i, label_transparency);
+            self.set_node_transparency(i, transparency);
+            self.model.nodes[i].radius = radius;
+            self.model.nodes[i].label_size = label_size;
+        }
+    }
+
+    pub fn highlight_bicone(&mut self, handle: usize) {
+        let (mut nodes, mut edges) = self.get_dependencies_nodes_edges(handle);
+        let (nodes_i, edges_i) = self.get_dependants_nodes_edges(handle);
         nodes.extend(nodes_i.iter());
         edges.extend(edges_i.iter());
 
         for i in 0..self.model.nodes.len() {
-            let transparency = if nodes.contains(&i) { 0xFF } else { 0x55 };
+            let transparency = if nodes.contains(&i) {
+                self.model.nodes[i].bicone = true;
+                0xFF
+            } else {
+                self.model.nodes[i].bicone = false;
+                0x55
+            };
+
             self.set_node_transparency(i, transparency);
         }
 
@@ -411,9 +434,15 @@ impl Scene {
     }
 
     fn set_node_transparency(&mut self, handle: usize, transparency: u8) {
-        let mut bytes = self.model.nodes[handle].colour.to_be_bytes();
-        bytes[3] = transparency;
-        self.model.nodes[handle].colour = u32::from_be_bytes(bytes);
+        self.model.nodes[handle]
+            .colour
+            .set_transparency(transparency);
+    }
+
+    fn set_node_label_transparency(&mut self, handle: usize, transparency: u8) {
+        self.model.nodes[handle]
+            .label_colour
+            .set_transparency(transparency);
     }
 
     fn set_edge_transparency(&mut self, handle: usize, transparency: u8) {
@@ -424,7 +453,7 @@ impl Scene {
         }
     }
 
-    fn highlight_dependencies(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
+    fn get_dependencies_nodes_edges(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue = vec![handle];
         let mut edges = vec![];
@@ -454,7 +483,7 @@ impl Scene {
         out
     }
 
-    fn highlight_dependents(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
+    fn get_dependants_nodes_edges(&mut self, handle: usize) -> (Vec<usize>, Vec<usize>) {
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue = vec![handle];
         let mut edges = vec![];

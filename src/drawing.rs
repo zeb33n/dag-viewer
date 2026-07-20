@@ -11,14 +11,15 @@ pub fn draw(scene: &Scene) -> () {
             js::fill_line(a.x, a.y, b.x, b.y, line.colour, width);
         }
     }
+    // TODO really we want to render text last in its own step.
     for node in scene.model.nodes.iter() {
         if node.is_fake_node {
             continue;
         }
         let p = scene.world_to_screen(&node.position);
-        let radius = 30.0 * scene.camera.zoom;
+        let radius = node.radius * scene.camera.zoom;
         js::fill_circ(p.x, p.y, radius, node.colour);
         let text: &str = &node.label;
-        js::fill_string(p.x + radius, p.y, text, 0xFF00FF55, 10.0);
+        js::fill_string(p.x + radius, p.y, text, node.label_colour, node.label_size);
     }
 }

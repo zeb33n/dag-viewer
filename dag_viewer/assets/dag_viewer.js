@@ -100,9 +100,11 @@ export async function dag_viewer_init(dotfile, id) {
     });
 
     app.addEventListener("mousemove", (e) => {
-        if (!mouse_is_down) return;
-
         const coords = canvas_coords(e);
+        if (!mouse_is_down) {
+            w.instance.exports.dag_viewer_hover(coords.x, coords.y);
+            return
+        };
         
         const dx = mouse_click_pos.x - coords.x;
         const dy = mouse_click_pos.y - coords.y;

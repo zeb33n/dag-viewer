@@ -66,9 +66,24 @@ pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
         if !scene.check_bound_circle(i, VecF2 { x: x, y: y }) {
             continue;
         }
-        scene.highlight_node(i);
+        scene.highlight_bicone(i);
         break;
     }
+    draw(&*scene);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dag_viewer_hover(x: f32, y: f32) -> () {
+    let mut scene = SCENE.lock().unwrap();
+    let mut handle = None;
+    for (i, _) in scene.model.nodes.iter().enumerate() {
+        if !scene.check_bound_circle(i, VecF2 { x: x, y: y }) {
+            continue;
+        }
+        handle = Some(i);
+        break;
+    }
+    scene.highlight_node(handle);
     draw(&*scene);
 }
 

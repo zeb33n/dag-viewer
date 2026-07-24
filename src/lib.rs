@@ -8,6 +8,7 @@ use std::sync::{
 };
 mod data_types;
 use data_types::*;
+mod colours;
 mod model;
 mod parser;
 mod scene;

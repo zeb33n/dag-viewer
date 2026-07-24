@@ -1,18 +1,7 @@
+use crate::colours::*;
 use std::ops::{self, AddAssign, SubAssign};
 // rgba
 pub type Colour = u32;
-
-pub trait ColourExt {
-    fn set_transparency(&mut self, transparency: u8);
-}
-
-impl ColourExt for Colour {
-    fn set_transparency(&mut self, transparency: u8) {
-        let mut bytes = self.to_be_bytes();
-        bytes[3] = transparency;
-        *self = u32::from_be_bytes(bytes);
-    }
-}
 
 #[derive(Clone)]
 pub struct Line {
@@ -26,7 +15,7 @@ impl Line {
         Self {
             a,
             b,
-            colour: 0x00000055,
+            colour: COLOURS.edge,
         }
     }
 }
@@ -50,6 +39,14 @@ impl Path {
 }
 
 #[derive(Clone, Debug)]
+pub enum Bicone {
+    Upstream,
+    Downstream,
+    Center,
+    None,
+}
+
+#[derive(Clone, Debug)]
 pub struct Node {
     pub is_fake_node: bool,
     pub position: VecF2,
@@ -60,7 +57,7 @@ pub struct Node {
     pub label_colour: Colour,
     pub edges: Vec<usize>,
     pub dependents: Vec<usize>,
-    pub bicone: bool,
+    pub bicone: Bicone,
 }
 
 impl Node {
@@ -69,13 +66,13 @@ impl Node {
             is_fake_node: false,
             position: VecF2 { x: 0.0, y: 0.0 },
             radius: 30.0,
-            colour: 0xFF000055,
-            label_colour: 0x00000055,
+            colour: COLOURS.node,
+            label_colour: COLOURS.text,
             label_size: 10.0,
             edges: vec![],
             label: label.to_string(),
             dependents: vec![],
-            bicone: false,
+            bicone: Bicone::None,
         }
     }
 
@@ -90,7 +87,7 @@ impl Node {
             edges: vec![],
             label: "".to_string(),
             dependents: vec![],
-            bicone: false,
+            bicone: Bicone::None,
         }
     }
 }

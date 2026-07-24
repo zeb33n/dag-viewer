@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::colours::{COLOURS, COLOURS_HIGHLIGHT};
 use crate::{data_types::*, model::*};
 
 use crate::web_print;
@@ -393,63 +394,71 @@ impl Scene {
         dx * dx + dy * dy <= circ.radius * circ.radius
     }
 
-    // TODO some concept of is node highlighted already or not
-    // so we dont overwrite highlight_bicone
     pub fn highlight_node(&mut self, handle: Option<usize>) {
         for i in 0..self.model.nodes.len() {
-            let (transparency, radius, label_size, label_transparency) = match handle {
-                Some(h) if h == i => (0xFF, 40.0, 20.0, 0xFF),
-                _ if self.model.nodes[i].bicone => (0xFF, 30.0, 10.0, 0x55),
-                _ => (0x55, 30.0, 10.0, 0x55),
+            let (colour, radius, label_size, label_colour) = match handle {
+                Some(h) if h == i => (
+                    COLOURS_HIGHLIGHT.node_hover,
+                    40.0,
+                    20.0,
+                    COLOURS_HIGHLIGHT.text,
+                ),
+                _ if matches!(self.model.nodes[i].bicone, Bicone::Upstream) => {
+                    (COLOURS_HIGHLIGHT.node_upstream, 30.0, 10.0, COLOURS.text)
+                }
+                _ if matches!(self.model.nodes[i].bicone, Bicone::Downstream) => {
+                    (COLOURS_HIGHLIGHT.node_downstream, 30.0, 10.0, COLOURS.text)
+                }
+                _ if matches!(self.model.nodes[i].bicone, Bicone::Center) => {
+                    (COLOURS_HIGHLIGHT.node_hover, 30.0, 10.0, COLOURS.text)
+                }
+                _ => (COLOURS.node, 30.0, 10.0, COLOURS.text),
             };
-            self.set_node_label_transparency(i, label_transparency);
-            self.set_node_transparency(i, transparency);
+            self.model.nodes[i].colour = colour;
+            self.model.nodes[i].label_colour = label_colour;
             self.model.nodes[i].radius = radius;
             self.model.nodes[i].label_size = label_size;
         }
     }
 
     pub fn highlight_bicone(&mut self, handle: usize) {
-        let (mut nodes, mut edges) = self.get_dependencies_nodes_edges(handle);
-        let (nodes_i, edges_i) = self.get_dependants_nodes_edges(handle);
-        nodes.extend(nodes_i.iter());
-        edges.extend(edges_i.iter());
+        let (nodes_dowstream, edges_downstream) = self.get_dependencies_nodes_edges(handle);
+        let (nodes_upstream, edges_upstream) = self.get_dependants_nodes_edges(handle);
 
         for i in 0..self.model.nodes.len() {
-            let transparency = if nodes.contains(&i) {
-                self.model.nodes[i].bicone = true;
-                0xFF
+            let colour = if nodes_dowstream.contains(&i) {
+                self.model.nodes[i].bicone = Bicone::Downstream;
+                COLOURS_HIGHLIGHT.node_downstream
+            } else if nodes_upstream.contains(&i) {
+                self.model.nodes[i].bicone = Bicone::Upstream;
+                COLOURS_HIGHLIGHT.node_upstream
             } else {
-                self.model.nodes[i].bicone = false;
-                0x55
+                self.model.nodes[i].bicone = Bicone::None;
+                COLOURS.node
             };
 
-            self.set_node_transparency(i, transparency);
+            self.model.nodes[i].colour = colour;
         }
 
         for i in 0..self.model.edges.len() {
-            let transparency = if edges.contains(&i) { 0xFF } else { 0x55 };
-            self.set_edge_transparency(i, transparency);
+            let colour = if edges_downstream.contains(&i) {
+                COLOURS_HIGHLIGHT.edge_downstream
+            } else if edges_upstream.contains(&i) {
+                COLOURS_HIGHLIGHT.edge_upstream
+            } else {
+                COLOURS.edge
+            };
+
+            self.set_edge_colour(i, colour);
         }
+
+        self.model.nodes[handle].colour = COLOURS_HIGHLIGHT.node_hover;
+        self.model.nodes[handle].bicone = Bicone::Center;
     }
 
-    fn set_node_transparency(&mut self, handle: usize, transparency: u8) {
-        self.model.nodes[handle]
-            .colour
-            .set_transparency(transparency);
-    }
-
-    fn set_node_label_transparency(&mut self, handle: usize, transparency: u8) {
-        self.model.nodes[handle]
-            .label_colour
-            .set_transparency(transparency);
-    }
-
-    fn set_edge_transparency(&mut self, handle: usize, transparency: u8) {
+    fn set_edge_colour(&mut self, handle: usize, colour: Colour) {
         for line in self.model.edges[handle].line_segments.iter_mut() {
-            let mut bytes = line.colour.to_be_bytes();
-            bytes[3] = transparency;
-            line.colour = u32::from_be_bytes(bytes);
+            line.colour = colour;
         }
     }
 

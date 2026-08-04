@@ -71,7 +71,7 @@ def define_env(env):
   const {{ dag_viewer_init}} = module;
   dag_viewer_init(`${{base}}/dag_viewer_assets/processed_{graph}`, "dag_viewer_{viewer_count[0]}");
 </script>
-<canvas id="dag_viewer_{viewer_count[0]}" height="{h}" width="{w}"></canvas>
+<canvas id="dag_viewer_{viewer_count[0]}" style="height: {h}; width: {w};"></canvas>
 """
 
 

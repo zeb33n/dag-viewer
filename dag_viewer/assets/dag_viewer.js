@@ -17,6 +17,14 @@ export async function dag_viewer_init(dotfile, id) {
     let mouse_is_down = false;
     let mouse_click_pos = { x: 0, y: 0};
 
+    function resize_canvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = app.getBoundingClientRect();
+        app.width = rect.width * dpr;
+        app.height = rect.height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
     function js_fill_rect(x, y, w, h, colour) {
         ctx.fillStyle = color_hex(colour); 
         ctx.fillRect(x, y, w, h);
@@ -56,10 +64,13 @@ export async function dag_viewer_init(dotfile, id) {
         const bounding_box = app.getBoundingClientRect();
 
         return {
-            x: (e.clientX - bounding_box.left) * app.width / app.clientWidth,
-            y: (e.clientY - bounding_box.top) * app.height / app.clientHeight,
+            x: (e.clientX - bounding_box.left),
+            y: (e.clientY - bounding_box.top),
         };
     }
+
+    // resize the canvas
+    resize_canvas();
 
     // load wasm
     const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
@@ -85,6 +96,8 @@ export async function dag_viewer_init(dotfile, id) {
     w.instance.exports.dag_viewer_init(app.width, app.height, ptr, d.length);
 
     // event listeners
+    window.addEventListener("resize", resize_canvas);
+
     app.addEventListener("mousedown", (e) => {
         const coords = canvas_coords(e);
         mouse_click_pos = {x: coords.x, y: coords.y};

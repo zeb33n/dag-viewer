@@ -8,7 +8,10 @@ import atexit
 
 CONFIG_FILE = "dag-viewer.yml"
 
-config = yaml.safe_load(Path(CONFIG_FILE).open())
+if Path(CONFIG_FILE).is_file():
+    config = yaml.safe_load(Path(CONFIG_FILE).open())
+else:
+    config = {}
 
 
 def get_config_value(key: str) -> Any | None:
@@ -18,11 +21,12 @@ def get_config_value(key: str) -> Any | None:
 
 
 SITE_DIR = get_config_value("site-dir") or "site"
-DOT_FILES = get_config_value("dot-files") or ["graph.dot"]
+DOT_ARGS = get_config_value("dot-args") or ["-Grankdir=LR"]
+
 ASSET_DIR = f"{SITE_DIR}/dag_viewer_assets"
 JS_FILE = "dag_viewer.js"
 WASM_FILE = "dag_viewer.wasm"
-
+GRAPHS = []
 
 def copy_assets():
     # copy required package files to ASSET_DIR
@@ -34,13 +38,13 @@ def copy_assets():
         shutil.copy2(out, dst)
 
     # use graphvis to process the dotfiles
-    for f in DOT_FILES:
-        if not Path(f).exists():
-            print(f"Warning: cant find file {f}")
+    for f in GRAPHS:
+        if not (Path(f).exists() and Path(f).is_file()):
+            print(f"DAG VIEWER: Warning: cant find file {f}")
             continue
 
         dotsrc = subprocess.run(
-            ["dot", "-Tdot", "-Gsplines=polyline", "-Grankdir=LR", f],
+            ["dot", "-Tdot", "-Gsplines=polyline", *DOT_ARGS, f],
             check=True,
             capture_output=True,
         ).stdout
@@ -55,6 +59,8 @@ def define_env(env):
 
     @env.macro
     def dag_viewer(w, h, graph):
+        GRAPHS.append(graph)
+        graph = Path(graph).name
         viewer_count[0] += 1
         return f"""
 <script type="module">

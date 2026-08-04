@@ -50,7 +50,9 @@ def copy_assets():
         ).stdout
 
         pf = f"processed_{Path(f).name}"
-        (Path(ASSET_DIR) / pf).write_bytes(dotsrc)
+        processed_path = Path(ASSET_DIR) / pf
+        print(f"DAG VIEWER: Processed {f} writing output to {processed_path}")
+        processed_path.write_bytes(dotsrc)
 
 
 def define_env(env):

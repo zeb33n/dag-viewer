@@ -3,7 +3,7 @@ use std::ops::{self, AddAssign, SubAssign};
 // rgba
 pub type Colour = u32;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Line {
     pub a: VecF2,
     pub b: VecF2,
@@ -20,8 +20,7 @@ impl Line {
     }
 }
 
-#[derive(Clone)]
-
+#[derive(Clone, Debug)]
 pub struct Path {
     pub from: NodeHandle,
     pub to: NodeHandle,
@@ -48,6 +47,7 @@ pub enum Bicone {
 
 #[derive(Clone, Debug)]
 pub struct Node {
+    pub id: String,
     pub is_fake_node: bool,
     pub position: VecF2,
     pub radius: f32,
@@ -57,12 +57,14 @@ pub struct Node {
     pub label_colour: Colour,
     pub edges: Vec<usize>,
     pub dependents: Vec<usize>,
+    pub link: Option<String>,
     pub bicone: Bicone,
 }
 
 impl Node {
     pub fn new(label: &str) -> Self {
         Self {
+            id: label.to_string(),
             is_fake_node: false,
             position: VecF2 { x: 0.0, y: 0.0 },
             radius: 30.0,
@@ -73,11 +75,13 @@ impl Node {
             label: label.to_string(),
             dependents: vec![],
             bicone: Bicone::None,
+            link: None,
         }
     }
 
     pub fn new_fake_node() -> Self {
         Self {
+            id: "".to_string(),
             is_fake_node: true,
             position: VecF2 { x: 0.0, y: 0.0 },
             radius: 30.0,
@@ -88,6 +92,7 @@ impl Node {
             label: "".to_string(),
             dependents: vec![],
             bicone: Bicone::None,
+            link: None,
         }
     }
 }

@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub enum Token {
+enum Token {
     OpenBrace,
     CloseBrace,
     OpenSquare,
@@ -18,6 +18,8 @@ pub enum Token {
     Node,
     Graph,
     Digraph,
+    Label,
+    Link,
     Word(String),
 }
 
@@ -92,15 +94,30 @@ fn tokenise_keywords(word: String) -> Token {
         "digraph" => Token::Digraph,
         "graph" => Token::Graph,
         "node" => Token::Node,
+        "dv_label" => Token::Label,
+        "dv_link" => Token::Link,
         _ => Token::Word(word),
     }
+}
+
+struct NodeStatement {
+    id: String,
+    label: Option<String>,
+    coord: Option<VecF2>,
+    link: Option<String>,
+}
+
+struct EdgeStatement {
+    from: String,
+    to: String,
+    lines: Option<Vec<Line>>,
 }
 
 pub fn parse(src: &str) -> Result<(Vec<Node>, Vec<Path>), String> {
     let tokens = tokenise(src)?;
     let mut tokens_iter = tokens.iter().peekable();
-    let mut nodes = Vec::new();
-    let mut paths = Vec::new();
+    let mut node_statements = Vec::new();
+    let mut edge_statements = Vec::new();
     match tokens_iter
         .next()
         .ok_or("expected word token".to_string())?
@@ -117,8 +134,8 @@ pub fn parse(src: &str) -> Result<(Vec<Node>, Vec<Path>), String> {
     loop {
         match tokens_iter.next().ok_or("expected token".to_string())? {
             Token::Word(word) => match tokens_iter.peek() {
-                Some(Token::Arrow) => parse_edge(&mut tokens_iter, &mut nodes, &mut paths, word)?,
-                _ => parse_node(&mut tokens_iter, &mut nodes, word)?,
+                Some(Token::Arrow) => edge_statements.push(parse_edge(&mut tokens_iter, word)?),
+                _ => node_statements.push(parse_node(&mut tokens_iter, word)?),
             },
             Token::OpenSquare => loop {
                 match tokens_iter.next() {
@@ -132,78 +149,137 @@ pub fn parse(src: &str) -> Result<(Vec<Node>, Vec<Path>), String> {
             unexpected => return Err(format!("Unexpected token {:?}", unexpected)),
         }
     }
+
+    let mut nodes = Vec::new();
+    for ns in node_statements.into_iter() {
+        let mut node = Node::new(&ns.id);
+        match ns.label {
+            Some(l) => node.label = l,
+            _ => (),
+        }
+        node.link = ns.link;
+        if is_graphviz_layout() {
+            node.position = ns.coord.ok_or(format!("No coordinates for {:?}", ns.id))?;
+        }
+        nodes.push(node)
+    }
+    let mut paths = Vec::new();
+    for es in edge_statements.into_iter() {
+        let to_handle = insert_and_get_index(&mut nodes, &es.to);
+        let from_handle = insert_and_get_index(&mut nodes, &es.from);
+        let mut path = Path::new(to_handle, from_handle);
+        if is_graphviz_layout() {
+            path.line_segments = es
+                .lines
+                .ok_or(format!("No coordinates for {:?} -> {:?}", &es.to, &es.from))?
+        }
+        nodes[from_handle].dependents.push(to_handle);
+        nodes[from_handle].edges.push(paths.len());
+        paths.push(path);
+    }
+
     if is_graphviz_layout() {
         adjust_edge_coordinates(&mut nodes, &mut paths);
     }
+
     Ok((nodes, paths))
 }
 
 fn parse_node(
     tokens_iter: &mut Peekable<Iter<Token>>,
-    nodes: &mut Vec<Node>,
-    parent_name: &str,
-) -> Result<(), String> {
-    let handle = insert_and_get_index(nodes, parent_name);
-    let pos_vec = parse_attributes(tokens_iter)?;
-    if !is_graphviz_layout() {
-        return Ok(());
-    }
-    if pos_vec.len() == 0 {
-        return Err("expected pos attributte".to_string());
-    }
-    nodes.get_mut(handle).unwrap().position = pos_vec.get(0).unwrap().to_owned();
-    Ok(())
-}
-
-fn parse_edge(
-    tokens_iter: &mut Peekable<Iter<Token>>,
-    nodes: &mut Vec<Node>,
-    paths: &mut Vec<Path>,
-    parent_name: &str,
-) -> Result<(), String> {
-    let parent_handle = insert_and_get_index(nodes, parent_name);
-    tokens_iter.next();
-    let child_handle = match tokens_iter.next().ok_or("expected token".to_string())? {
-        Token::Word(w) => Ok(insert_and_get_index(nodes, w)),
-        _ => Err("Expected node name".to_string()),
-    }?;
-    nodes
-        .get_mut(parent_handle)
-        .unwrap()
-        .dependents
-        .push(child_handle);
-    let pos_vec = parse_attributes(tokens_iter)?;
-    let mut path = Path::new(child_handle, parent_handle);
-    if !is_graphviz_layout() {
-        return Ok(());
-    }
-    if pos_vec.len() == 0 {
-        return Err("expected pos attributte".to_string());
-    }
-    // skip the first pair since this is start to end coords for whole path
-    // TODO find colinear segments and combine them to reduce N line segments
-    for w in pos_vec.windows(2).skip(1) {
-        path.line_segments
-            .push(Line::new(w[0].to_owned(), w[1].to_owned()));
-    }
-    paths.push(path);
-    nodes[parent_handle].edges.push(paths.len() - 1);
-
-    Ok(())
-}
-
-// TODO rework to parse attributes properly instead of just pos
-fn parse_attributes(tokens_iter: &mut Peekable<Iter<Token>>) -> Result<Vec<VecF2>, String> {
+    word: &str,
+) -> Result<NodeStatement, String> {
+    let id = word.to_string();
     match tokens_iter.peek() {
         Some(Token::OpenSquare) => {
             tokens_iter.next();
         }
-        _ => return Ok(vec![]),
+        _ => {
+            return Ok(NodeStatement {
+                id,
+                label: None,
+                coord: None,
+                link: None,
+            })
+        }
     }
-    let mut out = vec![];
+    let mut label = None;
+    let mut coord = None;
+    let mut link = None;
     loop {
         match tokens_iter.next().ok_or("expected token ]".to_string())? {
-            Token::Pos => {
+            Token::Pos if matches!(coord, None) => {
+                if !matches!(tokens_iter.next(), Some(Token::Equal)) {
+                    return Err(format!("expected ="));
+                }
+                let coords_str = match tokens_iter.next() {
+                    Some(Token::Word(w)) => w,
+                    _ => return Err("expected coordinates".to_string()),
+                };
+                let xy = coords_str.split_once(',').ok_or("expected ,".to_string())?;
+                let x: f32 = xy.0.parse().map_err(|e| format!("{:?} {}", e, xy.0))?;
+                let y: f32 = xy.1.parse().map_err(|e| format!("{:?} {}", e, xy.1))?;
+                coord = Some(VecF2 { x, y });
+            }
+            Token::Pos => return Err(format!("Position already defined for {:?}", id)),
+            Token::Link if matches!(link, None) => {
+                if !matches!(tokens_iter.next(), Some(Token::Equal)) {
+                    return Err(format!("expected ="));
+                }
+                link = match tokens_iter.next() {
+                    Some(Token::Word(w)) => Some(w.to_owned()),
+                    _ => return Err("expected a url".to_string()),
+                };
+            }
+            Token::Link => return Err(format!("Link already defined for {:?}", id)),
+            Token::Label if matches!(label, None) => {
+                if !matches!(tokens_iter.next(), Some(Token::Equal)) {
+                    return Err(format!("expected ="));
+                }
+                label = match tokens_iter.next() {
+                    Some(Token::Word(w)) => Some(w.to_owned()),
+                    _ => return Err("expected a string".to_string()),
+                };
+            }
+            Token::Label => return Err(format!("Label already defined for {:?}", id)),
+            Token::CloseSquare => break,
+            _ => (),
+        }
+    }
+    Ok(NodeStatement {
+        id,
+        label,
+        coord,
+        link,
+    })
+}
+
+fn parse_edge(
+    tokens_iter: &mut Peekable<Iter<Token>>,
+    parent_name: &str,
+) -> Result<EdgeStatement, String> {
+    let from = parent_name.to_string();
+    tokens_iter.next();
+    let to = match tokens_iter.next().ok_or("expected token".to_string())? {
+        Token::Word(w) => Ok(w.to_string()),
+        _ => Err("Expected node name".to_string()),
+    }?;
+    match tokens_iter.peek() {
+        Some(Token::OpenSquare) => {
+            tokens_iter.next();
+        }
+        _ => {
+            return Ok(EdgeStatement {
+                from,
+                to,
+                lines: None,
+            })
+        }
+    }
+    let mut lines = None;
+    loop {
+        match tokens_iter.next().ok_or("expected token ]".to_string())? {
+            Token::Pos if matches!(lines, None) => {
                 if !matches!(tokens_iter.next(), Some(Token::Equal)) {
                     return Err(format!("expected ="));
                 }
@@ -213,23 +289,31 @@ fn parse_attributes(tokens_iter: &mut Peekable<Iter<Token>>) -> Result<Vec<VecF2
                 };
                 let stripped_coords_str = coords_str.replace("e,", "");
                 let parts: Vec<&str> = stripped_coords_str.split(' ').collect();
+                let mut coordiantes = vec![];
                 for part in parts.iter() {
                     let xy = part.split_once(',').ok_or("expected ,".to_string())?;
                     let x: f32 = xy.0.parse().map_err(|e| format!("{:?} {}", e, xy.0))?;
                     let y: f32 = xy.1.parse().map_err(|e| format!("{:?} {}", e, xy.1))?;
-                    out.push(VecF2 { x, y });
+                    coordiantes.push(VecF2 { x, y });
                 }
+                let mut out = vec![];
+                // skip the first pair since this is start to end coords for whole path
+                for w in coordiantes.windows(2).skip(1) {
+                    out.push(Line::new(w[0].to_owned(), w[1].to_owned()));
+                }
+                lines = Some(out);
             }
+            Token::Pos => return Err("Pos is already defined for edge".to_string()),
             Token::CloseSquare => break,
             _ => (),
         }
     }
-    Ok(out)
+    Ok(EdgeStatement { from, to, lines })
 }
 
 fn insert_and_get_index(nodes: &mut Vec<Node>, word: &str) -> usize {
     for (i, node) in nodes.iter().enumerate() {
-        if node.label == word {
+        if node.id == word {
             return i;
         }
     }

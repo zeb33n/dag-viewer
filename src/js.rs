@@ -10,6 +10,7 @@ pub mod js_internal {
         pub fn js_fill_rect(x: f32, y: f32, w: f32, h: f32, colour: Colour);
         pub fn js_fill_line(x1: f32, y1: f32, x2: f32, y2: f32, colour: Colour, width: f32);
         pub fn js_fill_string(x: f32, y: f32, s: *const u8, len: usize, colour: Colour, size: f32);
+        pub fn js_follow_link(s: *const u8, len: usize);
     }
 }
 
@@ -31,6 +32,10 @@ pub fn log(msg: &str) -> () {
 
 pub fn fill_string(x: f32, y: f32, s: &str, colour: Colour, size: f32) -> () {
     unsafe { js_internal::js_fill_string(x, y, s.as_ptr(), s.len(), colour, size) }
+}
+
+pub fn follow_link(s: &str) {
+    unsafe { js_internal::js_follow_link(s.as_ptr(), s.len()) }
 }
 
 #[macro_export]

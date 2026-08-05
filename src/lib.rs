@@ -68,6 +68,10 @@ pub extern "C" fn dag_viewer_click(x: f32, y: f32) -> () {
             continue;
         }
         scene.highlight_bicone(i);
+        match &scene.model.nodes[i].link {
+            Some(l) => js::follow_link(l),
+            None => (),
+        }
         break;
     }
     draw(&*scene);

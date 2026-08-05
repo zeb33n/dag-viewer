@@ -54,6 +54,12 @@ export async function dag_viewer_init(dotfile, id) {
         ctx.fillText(str, x, y); 
     }
 
+    function js_follow_link(pString, stringLen) {
+        const bytes = new Uint8Array(w.instance.exports.memory.buffer, pString, stringLen);
+        const str = new TextDecoder().decode(bytes);
+        window.location.href = str;
+    }
+
     function js_log(ptr, len) {
         const bytes = new Uint8Array(w.instance.exports.memory.buffer, ptr, len);
         const str = new TextDecoder().decode(bytes);
@@ -71,7 +77,7 @@ export async function dag_viewer_init(dotfile, id) {
 
     // resize the canvas
     resize_canvas();
-
+    
     // load wasm
     const wasm_path = new URL('dag_viewer.wasm', import.meta.url);
     w = await WebAssembly.instantiateStreaming(await fetch(wasm_path), {
@@ -81,6 +87,7 @@ export async function dag_viewer_init(dotfile, id) {
             js_fill_circ,
             js_log,
             js_fill_string,
+            js_follow_link,
         }
     })
 

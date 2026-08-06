@@ -64,7 +64,7 @@ python3 -m http.server -d site
 
 ## Config
 
-You can congigure Dag Viewer using enviromental variables or a config file.
+You can configure Dag Viewer using enviromental variables or a config file.
 This should be called `dag-viewer.yml` and live in your projects route directory.
 
 The following options are available.
@@ -73,3 +73,16 @@ The following options are available.
 | - | - | - | - |
 | `site-dir` | `DAG_VIEWER_SITE_DIR` | The path to zensicals output site directory | string |
 | `dot-args` | `DAG_VIEWER_DOT_ARGS` | Additional formatting argument to pass to graphviz | list |
+
+## Dot Attributes
+
+Dag Viewer supports a number of specialised node attributes that can modify the behaviour of the macro.
+For a brief overview please see the following table.
+
+| attribute | effect | 
+| - | - |
+| [`dv_label`](attributes.md#dv_label) | Modifies the display label of the attributed node | 
+| [`dv_link`](attributes.md#dv_link) | A link to follow when the atrributed node is clicked |
+
+for more info please see [attributes](attributes.md)
+

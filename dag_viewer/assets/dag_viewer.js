@@ -92,12 +92,12 @@ export async function dag_viewer_init(dotfile, id) {
     })
 
     // load the dot file into wasm memory
-    const dot_path = new URL(dotfile, import.meta.url);
-    console.log(dot_path);
-    const d = await new Uint8Array(await (await fetch(dot_path)).arrayBuffer());
+    const dotPath = new URL(dotfile, import.meta.url);
+    const res = await fetch(dotPath);
+    const buf = await res.arrayBuffer();
+    const d = new Uint8Array(buf);
     const ptr = w.instance.exports.dag_viewer_alloc(d.length);
-    const memory = new Uint8Array(w.instance.exports.memory.buffer);
-    memory.set(d, ptr);
+    new Uint8Array(w.instance.exports.memory.buffer).set(d, ptr);
 
     // start the app
     w.instance.exports.dag_viewer_init(app.width, app.height, ptr, d.length);

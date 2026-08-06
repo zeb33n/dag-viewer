@@ -1,0 +1,7 @@
+digraph {
+  node1 [dv_link="attributes.html#node1"]
+  node2 [dv_link="attributes.html#node2"]
+  node3 [dv_link="attributes.html#node3"]
+  node1 -> node2
+  node1 -> node3
+}

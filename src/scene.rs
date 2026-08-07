@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::ops::Mul;
 
 use crate::colours::{COLOURS, COLOURS_HIGHLIGHT};
 use crate::{data_types::*, model::*};
@@ -45,20 +46,21 @@ struct LayoutNodeWrapper {
 }
 
 impl Scene {
-    pub fn new(screen_w: i32, screen_h: i32, src: &str) -> Self {
-        Self {
+    pub fn new(screen_w: f32, screen_h: f32, src: &str) -> Self {
+        let mut out = Self {
             camera: Camera {
                 pos: VecF2 {
-                    x: screen_w as f32 / 2.0,
-                    y: screen_h as f32 / 2.0,
+                    x: screen_w / 2.0,
+                    y: screen_h / 2.0,
                 },
                 zoom: 1.0,
             },
-            screen_w: screen_w as f32,
-            screen_h: screen_h as f32,
+            screen_w: screen_w,
+            screen_h: screen_h,
             model: Model::from_source(src),
-            // TODO calculate this properly
-        }
+        };
+        out.center_camera();
+        out
     }
 
     pub fn new_default() -> Self {
@@ -392,6 +394,39 @@ impl Scene {
         let dy = coord.y - circ.center.y;
 
         dx * dx + dy * dy <= circ.radius * circ.radius
+    }
+
+    // TODO smooth zooming
+    fn center_camera(&mut self) {
+        let first = &self.model.nodes.get(0).unwrap().position;
+        let (x_min, x_max, y_min, y_max) = self.model.nodes.iter().skip(1).fold(
+            (first.x, first.x, first.y, first.y),
+            |(min_x, max_x, min_y, max_y), n| {
+                let p = &n.position;
+                (
+                    min_x.min(p.x),
+                    max_x.max(p.x),
+                    min_y.min(p.y),
+                    max_y.max(p.y),
+                )
+            },
+        );
+
+        let x_range = x_max - x_min;
+        let y_range = y_max - y_min;
+
+        let margin_scale = 0.6;
+
+        if self.screen_w * margin_scale < x_range * self.camera.zoom {
+            self.camera.zoom = (self.screen_w * margin_scale) / x_range;
+        }
+        if self.screen_h * margin_scale < y_range * self.camera.zoom {
+            self.camera.zoom = (self.screen_h * margin_scale) / y_range;
+        }
+        self.camera.pos = VecF2 {
+            x: (x_min + x_max) / 2.0,
+            y: (y_min + y_max) / 2.0,
+        };
     }
 
     pub fn highlight_node(&mut self, handle: Option<usize>) {

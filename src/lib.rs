@@ -23,7 +23,7 @@ static SCENE: LazyLock<Mutex<Scene>> = LazyLock::new(|| Mutex::new(Scene::new_de
 
 #[unsafe(no_mangle)]
 // force the compiler to use C ABI so WebAssemply module interface is stable
-pub extern "C" fn dag_viewer_init(w: i32, h: i32, ptr: *const u8, len: usize) -> () {
+pub extern "C" fn dag_viewer_init(w: f32, h: f32, ptr: *const u8, len: usize) -> () {
     let bytes: &[u8] = unsafe { std::slice::from_raw_parts(ptr, len) };
     let dot = std::str::from_utf8(bytes).unwrap();
     let mut scene = SCENE.lock().unwrap();
@@ -49,7 +49,7 @@ pub extern "C" fn dag_viewer_drag(dx: f32, dy: f32) -> () {
 pub extern "C" fn dag_viewer_zoom(x: f32, y: f32, direction: bool) -> () {
     let dz = if direction { -0.1 } else { 0.1 };
     let mut scene = SCENE.lock().unwrap();
-    if scene.camera.zoom - dz <= 0.0 {
+    if scene.camera.zoom - dz <= 0.01 {
         return;
     }
     let coord_before = scene.screen_to_world(&VecF2 { x: x, y: y });

@@ -100,7 +100,8 @@ export async function dag_viewer_init(dotfile, id) {
     new Uint8Array(w.instance.exports.memory.buffer).set(d, ptr);
 
     // start the app
-    w.instance.exports.dag_viewer_init(app.width, app.height, ptr, d.length);
+    const rectangle = app.getBoundingClientRect();
+    w.instance.exports.dag_viewer_init(rectangle.width, rectangle.height, ptr, d.length);
 
     // event listeners
     window.addEventListener("resize", resize_canvas);

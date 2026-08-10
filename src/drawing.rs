@@ -11,7 +11,7 @@ pub fn draw(scene: &Scene) -> () {
             js::fill_line(a.x, a.y, b.x, b.y, line.colour, width);
         }
     }
-    // TODO really we want to render text last in its own step.
+    let mut labels = Vec::new();
     for node in scene.model.nodes.iter() {
         if node.is_fake_node {
             continue;
@@ -20,6 +20,9 @@ pub fn draw(scene: &Scene) -> () {
         let radius = node.radius * scene.camera.zoom;
         js::fill_circ(p.x, p.y, radius, node.colour);
         let text: &str = &node.label;
-        js::fill_string(p.x + radius, p.y, text, node.label_colour, node.label_size);
+        labels.push((p.x + radius, p.y, text, node.label_colour, node.label_size));
+    }
+    for (x, y, label, colour, size) in labels {
+        js::fill_string(x, y, label, colour, size);
     }
 }

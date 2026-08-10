@@ -19,7 +19,7 @@ pub const COLOURS: Colours = Colours {
     // Neutral gray background state
     node: 0x37415155,
     edge: 0xD1D5DB55,
-    text: 0xD1D5DB55,
+    text: 0x37415135,
 };
 
 pub const COLOURS_HIGHLIGHT: ColoursHighlighted = ColoursHighlighted {

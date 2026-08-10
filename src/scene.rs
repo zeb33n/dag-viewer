@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::ops::Mul;
 
 use crate::colours::{COLOURS, COLOURS_HIGHLIGHT};
 use crate::{data_types::*, model::*};
@@ -415,7 +414,7 @@ impl Scene {
         let x_range = x_max - x_min;
         let y_range = y_max - y_min;
 
-        let margin_scale = 0.6;
+        let margin_scale = 0.9;
 
         if self.screen_w * margin_scale < x_range * self.camera.zoom {
             self.camera.zoom = (self.screen_w * margin_scale) / x_range;

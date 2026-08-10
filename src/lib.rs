@@ -47,13 +47,14 @@ pub extern "C" fn dag_viewer_drag(dx: f32, dy: f32) -> () {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn dag_viewer_zoom(x: f32, y: f32, direction: bool) -> () {
-    let dz = if direction { -0.1 } else { 0.1 };
+    let dz = if direction { 0.9 } else { 1.1 };
     let mut scene = SCENE.lock().unwrap();
-    if scene.camera.zoom - dz <= 0.01 {
+    if scene.camera.zoom * dz <= 0.01 {
+        scene.camera.zoom = 0.01;
         return;
     }
     let coord_before = scene.screen_to_world(&VecF2 { x: x, y: y });
-    scene.camera.zoom -= dz;
+    scene.camera.zoom *= dz;
     let coord_after = scene.screen_to_world(&VecF2 { x: x, y: y });
     scene.camera.pos.x += coord_before.x - coord_after.x;
     scene.camera.pos.y += coord_before.y - coord_after.y;

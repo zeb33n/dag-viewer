@@ -1,3 +1,4 @@
+use crate::colours::COLOURS_HIGHLIGHT;
 use crate::js;
 use crate::scene::Scene;
 
@@ -19,8 +20,16 @@ pub fn draw(scene: &Scene) -> () {
         let p = scene.world_to_screen(&node.position);
         let radius = node.radius * scene.camera.zoom;
         js::fill_circ(p.x, p.y, radius, node.colour);
-        let text: &str = &node.label;
-        labels.push((p.x + radius, p.y, text, node.label_colour, node.label_size));
+        if scene.camera.zoom <= 0.1 && node.label_colour != COLOURS_HIGHLIGHT.text {
+            continue;
+        }
+        labels.push((
+            p.x + radius,
+            p.y,
+            &node.label,
+            node.label_colour,
+            node.label_size,
+        ));
     }
     for (x, y, label, colour, size) in labels {
         js::fill_string(x, y, label, colour, size);
